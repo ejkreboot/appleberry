@@ -1,0 +1,1216 @@
+<title>Orbital Atlas</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root{
+  --ground:#EDF0F3; --surface:#F7F8FA; --raised:#FFFFFF; --ink:#16202E; --ink-2:#465264; --muted:#6B7686;
+  --rule:#CDD4DC; --rule-soft:#DFE4EA; --grid:rgba(22,32,46,.06);
+  --accent:#1F4FA8; --accent-ink:#FFFFFF; --accent-soft:#DCE6F6;
+  --s:#C4503F; --p:#2F74B5; --d:#B7860C; --f:#7B55B8;
+  --pos:#2F6BD8; --neg:#E0822B;
+  --good:#2E7D4F; --good-soft:#DDEFE4; --bad:#B53A2E; --bad-soft:#F6E0DC;
+  --ghost:#9AA4B1;
+  --display:"Bricolage Grotesque", "Avenir Next", "Segoe UI", sans-serif;
+  --body:"Atkinson Hyperlegible", "Verdana", "Segoe UI", sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#10151C; --surface:#161C25; --raised:#1C2430; --ink:#E5EAF0; --ink-2:#B4BECB; --muted:#8B97A7;
+    --rule:#2E3846; --rule-soft:#232C38; --grid:rgba(229,234,240,.06);
+    --accent:#7FA8EE; --accent-ink:#0E1522; --accent-soft:#1E2C44;
+    --s:#D9685A; --p:#4F8FD0; --d:#B8912A; --f:#9676D0;
+    --pos:#5B92F0; --neg:#F0A04B;
+    --good:#6CC08E; --good-soft:#18301F; --bad:#EE8577; --bad-soft:#3A1C19; --ghost:#5D6877;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#10151C; --surface:#161C25; --raised:#1C2430; --ink:#E5EAF0; --ink-2:#B4BECB; --muted:#8B97A7;
+  --rule:#2E3846; --rule-soft:#232C38; --grid:rgba(229,234,240,.06);
+  --accent:#7FA8EE; --accent-ink:#0E1522; --accent-soft:#1E2C44;
+  --s:#D9685A; --p:#4F8FD0; --d:#B8912A; --f:#9676D0;
+  --pos:#5B92F0; --neg:#F0A04B;
+  --good:#6CC08E; --good-soft:#18301F; --bad:#EE8577; --bad-soft:#3A1C19; --ghost:#5D6877;
+}
+*{box-sizing:border-box}
+html,body{background:var(--ground);color:var(--ink)}
+body{font-family:var(--body);font-size:16px;line-height:1.55;margin:0}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.1}
+p{margin:0}
+.mono{font-family:var(--mono)}
+sub,sup{font-size:.72em;line-height:0}
+
+/* ---------- shell ---------- */
+.top{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--ground) 92%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--rule)}
+.top-inner{max-width:1280px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;gap:12px 28px;flex-wrap:wrap}
+.brand{display:flex;align-items:baseline;gap:12px}
+.brand h1{font-size:1.45rem;font-weight:800;letter-spacing:-.02em}
+.brand h1 i{font-style:normal;color:var(--accent)}
+.brand span{font-family:var(--mono);font-size:.72rem;color:var(--muted);letter-spacing:.04em}
+nav.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+nav.tabs button{background:none;border:0;border-radius:999px;padding:6px 14px;font-weight:700;font-size:.92rem;color:var(--ink-2);cursor:pointer}
+nav.tabs button:hover{background:var(--rule-soft);color:var(--ink)}
+nav.tabs button[aria-selected="true"]{background:var(--ink);color:var(--ground)}
+main{max-width:1280px;margin:0 auto;padding:28px 20px 64px}
+section.mod{display:none}
+section.mod.on{display:block}
+.mod-head{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;margin-bottom:22px;max-width:760px}
+.eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.mod-head h2{font-size:clamp(1.8rem,3.4vw,2.6rem);font-weight:800;letter-spacing:-.025em}
+.mod-head p{color:var(--ink-2);max-width:65ch}
+
+.bench{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(300px,1fr);gap:20px;align-items:start}
+@media (max-width:900px){.bench{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:18px}
+.stack{display:flex;flex-direction:column;gap:16px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.label{font-family:var(--mono);font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.note{font-size:.92rem;color:var(--ink-2)}
+.hint{font-size:.85rem;color:var(--muted)}
+
+.btn{border:1px solid var(--rule);background:var(--raised);border-radius:7px;padding:6px 12px;cursor:pointer;font-weight:700;font-size:.9rem}
+.btn:hover{border-color:var(--ink-2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--ground)}
+.seg{display:inline-flex;border:1px solid var(--rule);border-radius:8px;overflow:hidden;background:var(--raised)}
+.seg button{border:0;background:none;padding:6px 12px;cursor:pointer;font-weight:700;font-size:.88rem;color:var(--ink-2);border-right:1px solid var(--rule-soft)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--ground)}
+
+.tag{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:.75rem;padding:2px 8px;border-radius:999px;border:1px solid var(--rule);color:var(--ink-2)}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex:none}
+.c-s{--c:var(--s)} .c-p{--c:var(--p)} .c-d{--c:var(--d)} .c-f{--c:var(--f)}
+
+/* ---------- 3D stage ---------- */
+.stage{position:relative;aspect-ratio:4/3;max-width:100%;border-radius:10px;overflow:hidden;border:1px solid var(--rule);
+  background:radial-gradient(circle at 50% 45%,var(--raised),var(--surface) 70%);touch-action:none;cursor:grab}
+.stage:active{cursor:grabbing}
+.stage canvas{display:block;width:100%;height:100%}
+.stage .cap{position:absolute;left:14px;top:12px;pointer-events:none}
+.stage .cap .big{font-family:var(--display);font-weight:800;font-size:2rem;letter-spacing:-.02em;line-height:1}
+.stage .cap .sm{font-family:var(--mono);font-size:.72rem;color:var(--muted);margin-top:4px}
+.stage .legend{position:absolute;right:12px;bottom:10px;display:flex;gap:10px;font-family:var(--mono);font-size:.72rem;color:var(--ink-2);pointer-events:none}
+.stage .drag{position:absolute;left:14px;bottom:10px;font-size:.75rem;color:var(--muted);pointer-events:none}
+.pair{display:grid;grid-template-columns:1fr;gap:12px}
+.pair.two{grid-template-columns:1fr 1fr}
+@media (max-width:620px){.pair.two{grid-template-columns:1fr}}
+
+/* orbital picker */
+.picker{display:flex;flex-direction:column;gap:10px}
+.pk-shell{display:grid;grid-template-columns:28px minmax(0,1fr);gap:8px;align-items:start}
+.pk-n{font-family:var(--display);font-weight:800;font-size:1.3rem;line-height:28px;color:var(--muted)}
+.pk-subs{display:flex;flex-wrap:wrap;gap:6px 10px}
+.pk-sub{display:flex;gap:3px;padding:3px;border-radius:7px;background:color-mix(in srgb,var(--c) 10%,transparent)}
+.pk-sub button{min-width:30px;height:26px;padding:0 6px;border-radius:5px;border:1px solid color-mix(in srgb,var(--c) 35%,transparent);background:var(--raised);font-family:var(--mono);font-size:.7rem;cursor:pointer;color:var(--ink)}
+.pk-sub button:hover{border-color:var(--c)}
+.pk-sub button[aria-pressed="true"]{background:var(--c);border-color:var(--c);color:#fff}
+.pk-sub button.pinned{box-shadow:inset 0 -3px 0 var(--ink)}
+
+.facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:8px;overflow:hidden}
+.facts div{background:var(--raised);padding:10px 12px}
+.facts b{display:block;font-family:var(--display);font-size:1.5rem;line-height:1.1}
+.facts span{font-size:.78rem;color:var(--muted)}
+.plot-wrap{position:relative}
+.plot-wrap canvas{width:100%;height:200px;display:block}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--ground);font-family:var(--mono);font-size:.72rem;padding:4px 8px;border-radius:5px;white-space:nowrap;transform:translate(-50%,-120%)}
+
+/* ---------- address ---------- */
+.dial{display:grid;grid-template-columns:120px minmax(0,1fr);gap:10px 16px;align-items:center;padding:12px 0;border-bottom:1px solid var(--rule-soft)}
+.dial:last-child{border-bottom:0}
+.dial .qn{font-family:var(--display);font-weight:800;font-size:1.3rem}
+.dial .qn small{display:block;font-family:var(--body);font-weight:400;font-size:.8rem;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{min-width:44px;height:38px;border-radius:7px;border:1px solid var(--rule);background:var(--raised);font-family:var(--mono);font-weight:600;cursor:pointer}
+.chips button[aria-pressed="true"]{background:var(--ink);color:var(--ground);border-color:var(--ink)}
+.chips button.bad{color:var(--ghost);border-style:dashed;background:transparent}
+@media (max-width:520px){.dial{grid-template-columns:1fr}}
+.readout{font-family:var(--mono);font-size:1.05rem;display:flex;flex-wrap:wrap;gap:4px 18px}
+.readout b{color:var(--accent)}
+.flash{border-radius:8px;padding:10px 12px;font-size:.92rem;background:var(--bad-soft);color:var(--ink)}
+.flash strong{color:var(--bad)}
+.boxes{display:flex;gap:4px;flex-wrap:wrap}
+.box{width:34px;height:38px;border:1.5px solid var(--ink-2);border-radius:4px;display:flex;align-items:center;justify-content:center;gap:1px;font-size:1.05rem;line-height:1;background:var(--raised);position:relative}
+.box.hl{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.box .ml{position:absolute;bottom:-18px;left:0;right:0;text-align:center;font-family:var(--mono);font-size:.62rem;color:var(--muted)}
+.arrow{font-family:var(--body);font-weight:700}
+.arrow.ghost{color:var(--ghost)}
+.meaning{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px 14px;font-size:.93rem}
+.meaning dt{font-family:var(--mono);font-weight:600;color:var(--accent)}
+.meaning dd{margin:0;color:var(--ink-2)}
+
+/* ---------- counting ---------- */
+.hotel{display:flex;flex-direction:column;gap:8px}
+.floor{display:grid;grid-template-columns:70px minmax(0,1fr);gap:12px;align-items:center;border:1px solid var(--rule);background:var(--surface);border-radius:10px;padding:10px 12px;cursor:pointer;text-align:left}
+.floor:hover{border-color:var(--ink-2)}
+.floor[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.floor .fl{font-family:var(--display);font-weight:800;font-size:1.05rem;line-height:1.1}
+.floor .fl small{display:block;font-family:var(--mono);font-weight:400;font-size:.68rem;color:var(--muted)}
+.halls{display:flex;flex-wrap:wrap;gap:8px 16px;overflow-x:auto}
+.hall{display:flex;flex-direction:column;gap:3px}
+.hall .hn{font-family:var(--mono);font-size:.7rem;color:var(--c);font-weight:600}
+.rooms{display:flex;gap:3px}
+.room{width:24px;height:26px;border-radius:3px;border:1.5px solid var(--c);background:color-mix(in srgb,var(--c) 8%,var(--raised));display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;color:var(--ink)}
+table.tally{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+table.tally th{font-family:var(--mono);font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:right;font-weight:600;padding:6px 8px;border-bottom:1px solid var(--rule)}
+table.tally th:first-child,table.tally td:first-child{text-align:left}
+table.tally td{padding:7px 8px;text-align:right;border-bottom:1px solid var(--rule-soft);font-family:var(--mono)}
+table.tally tr.sel td{background:var(--accent-soft)}
+table.tally td.hi{font-weight:600;color:var(--accent)}
+
+/* ---------- energy ---------- */
+.ladder-wrap{overflow-x:auto}
+svg text{fill:var(--ink)}
+.lvl rect.bx{fill:var(--raised);stroke:var(--c);stroke-width:1.5}
+.lvl text.lb{font-family:var(--mono);font-size:12px;font-weight:600}
+.ready .lvl{transition:transform .9s cubic-bezier(.6,0,.2,1),opacity .4s}
+.lvl.ghost rect.bx{stroke-dasharray:3 3;stroke:var(--ghost)}
+.lvl.ghost text.lb{fill:var(--muted)}
+.lvl.now rect.bx{fill:var(--c);fill-opacity:.35;stroke-width:2.5}
+.lvl.done rect.bx{fill:var(--c);fill-opacity:.12}
+.diag{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;position:relative}
+.diag div{font-family:var(--mono);font-weight:600;font-size:.9rem;text-align:center;padding:6px 0;border-radius:6px;border:1px solid transparent}
+.diag .cell{background:var(--raised);border-color:color-mix(in srgb,var(--c) 45%,transparent)}
+.diag .cell.ghost{border-style:dashed;border-color:var(--rule);color:var(--muted)}
+.diag .cell.now{background:var(--c);color:#fff}
+.diag .cell.done{background:color-mix(in srgb,var(--c) 18%,var(--raised))}
+.diag .cell .k{display:block;font-size:.62rem;font-weight:400;color:inherit;opacity:.75}
+table.mad{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:.85rem;font-variant-numeric:tabular-nums}
+table.mad th{font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600;padding:4px 6px;border-bottom:1px solid var(--rule);text-align:center}
+table.mad td{padding:4px 6px;text-align:center;border-bottom:1px solid var(--rule-soft)}
+table.mad tr{transition:transform .5s ease}
+table.mad tr.ghost td{color:var(--muted)}
+table.mad tr.now td{background:var(--accent-soft)}
+table.mad td.sum{font-weight:600}
+
+/* ---------- filling ---------- */
+.el-card{display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px;align-items:center}
+.el-sym{width:92px;height:92px;border-radius:10px;border:2px solid var(--c);background:color-mix(in srgb,var(--c) 10%,var(--raised));display:flex;flex-direction:column;align-items:center;justify-content:center}
+.el-sym b{font-family:var(--display);font-size:2.3rem;font-weight:800;line-height:1}
+.el-sym span{font-family:var(--mono);font-size:.72rem;color:var(--ink-2)}
+.config{font-family:var(--mono);font-size:1.02rem;line-height:1.7;word-break:break-word}
+.config .sh{color:var(--muted)}
+.diagram{display:flex;flex-wrap:wrap;gap:22px 18px;padding:8px 2px 18px}
+.sub-g{display:flex;flex-direction:column;gap:5px}
+.sub-g .nm{font-family:var(--mono);font-size:.78rem;font-weight:600;color:var(--c)}
+.sub-g .box{border-color:var(--c)}
+.sub-g.new .nm::after{content:" ← new";color:var(--accent)}
+.box .arrow.fresh{color:var(--accent)}
+.ptable{display:grid;grid-template-columns:repeat(18,minmax(0,1fr));gap:3px}
+.ptable button{aspect-ratio:1;max-width:100%;border:1px solid color-mix(in srgb,var(--c) 45%,transparent);background:color-mix(in srgb,var(--c) 9%,var(--raised));border-radius:4px;font-family:var(--mono);font-size:clamp(.5rem,1.2vw,.72rem);font-weight:600;cursor:pointer;padding:0;color:var(--ink)}
+.ptable button[aria-pressed="true"]{background:var(--c);color:#fff;border-color:var(--c)}
+.ptable button.filled{background:color-mix(in srgb,var(--c) 24%,var(--raised))}
+.rule-card{border-left:3px solid var(--accent);padding:4px 0 4px 12px}
+.rule-card h3{font-size:1.05rem;margin-bottom:4px}
+.exc{background:var(--accent-soft);border-radius:8px;padding:10px 12px;font-size:.92rem}
+input[type=range]{width:100%;accent-color:var(--accent)}
+
+/* ---------- practice ---------- */
+.q-types{display:flex;flex-wrap:wrap;gap:6px}
+.q-card{min-height:320px}
+.q-prompt{font-family:var(--display);font-size:1.4rem;font-weight:700;letter-spacing:-.01em;line-height:1.25}
+.opts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+@media (max-width:560px){.opts{grid-template-columns:1fr}}
+.opts button{text-align:left;padding:12px 14px;border-radius:8px;border:1px solid var(--rule);background:var(--raised);cursor:pointer;font-size:1rem;line-height:1.35}
+.opts button:hover:not(:disabled){border-color:var(--ink-2)}
+.opts button.right{border-color:var(--good);background:var(--good-soft)}
+.opts button.wrong{border-color:var(--bad);background:var(--bad-soft)}
+.opts button:disabled{cursor:default}
+.fb{border-radius:8px;padding:12px 14px;font-size:.95rem}
+.fb.ok{background:var(--good-soft)} .fb.no{background:var(--bad-soft)}
+.fb strong{display:block;margin-bottom:2px}
+.fb.ok strong{color:var(--good)} .fb.no strong{color:var(--bad)}
+.tapseq{display:flex;flex-wrap:wrap;gap:8px}
+.tapseq button{font-family:var(--mono);font-weight:600;font-size:1rem;padding:10px 16px;border-radius:8px;border:1.5px solid var(--c);background:var(--raised);cursor:pointer;color:var(--ink)}
+.tapseq button:disabled{background:color-mix(in srgb,var(--c) 18%,var(--raised));cursor:default}
+.tapseq button .ord{font-size:.7rem;color:var(--muted);margin-left:6px}
+.score{font-family:var(--mono);font-size:.85rem;color:var(--ink-2)}
+.qstage{max-width:420px}
+@media (prefers-reduced-motion: reduce){ .lvl,table.mad tr{transition:none} }
+</style>
+
+<header class="top">
+  <div class="top-inner">
+    <div class="brand"><h1>Orbital <i>Atlas</i></h1><span>shells n = 1–4 · Madelung order</span></div>
+    <nav class="tabs" role="tablist" aria-label="Modules">
+      <button role="tab" data-tab="addresses" id="tab-addresses">Addresses</button>
+      <button role="tab" data-tab="shapes" id="tab-shapes">Shapes</button>
+      <button role="tab" data-tab="counting" id="tab-counting">Counting</button>
+      <button role="tab" data-tab="energy" id="tab-energy">Energy order</button>
+      <button role="tab" data-tab="filling" id="tab-filling">Filling</button>
+      <button role="tab" data-tab="practice" id="tab-practice">Practice</button>
+    </nav>
+  </div>
+</header>
+
+<main>
+<!-- ============ ADDRESSES ============ -->
+<section class="mod" id="mod-addresses" role="tabpanel">
+  <div class="mod-head">
+    <div class="eyebrow">Quantum numbers</div>
+    <h2>Every electron has a four-part address</h2>
+    <p>Like floor, hallway, room and bed in a hotel. Each number limits what the next one can be. Pick values below. Values that aren't allowed are dashed; tap one to see why.</p>
+  </div>
+  <div class="bench">
+    <div class="stack">
+      <div class="panel">
+        <div class="dial"><div class="qn">n<small>shell</small></div><div class="chips" id="ad-n"></div></div>
+        <div class="dial"><div class="qn">ℓ<small>subshell</small></div><div class="chips" id="ad-l"></div></div>
+        <div class="dial"><div class="qn">m<sub>ℓ</sub><small>orbital</small></div><div class="chips" id="ad-m"></div></div>
+        <div class="dial"><div class="qn">m<sub>s</sub><small>spin</small></div><div class="chips" id="ad-s"></div></div>
+      </div>
+      <div id="ad-flash" class="flash" hidden></div>
+      <div class="panel stack">
+        <div class="label">This address points to</div>
+        <div class="readout" id="ad-readout"></div>
+        <p id="ad-sentence" style="font-size:1.1rem"></p>
+        <div>
+          <div class="label" style="margin-bottom:8px" id="ad-boxlabel"></div>
+          <div class="boxes" id="ad-boxes" style="padding-bottom:18px"></div>
+        </div>
+      </div>
+    </div>
+    <div class="stack">
+      <div class="stage" id="ad-stage"><div class="cap"><div class="big" id="ad-cap"></div><div class="sm">drag to rotate</div></div>
+        <div class="legend"><span><i class="dot" style="background:var(--pos)"></i> + phase</span><span><i class="dot" style="background:var(--neg)"></i> − phase</span></div></div>
+      <div class="panel">
+        <dl class="meaning">
+          <dt>n</dt><dd><b>Shell.</b> Sets the orbital's size and main energy level. Can be 1, 2, 3, 4…</dd>
+          <dt>ℓ</dt><dd><b>Subshell.</b> Sets the shape: 0 = s, 1 = p, 2 = d, 3 = f. Can be 0 up to n − 1.</dd>
+          <dt>m<sub>ℓ</sub></dt><dd><b>Orbital.</b> Sets the orientation in space. Runs from −ℓ to +ℓ.</dd>
+          <dt>m<sub>s</sub></dt><dd><b>Spin.</b> +½ (up) or −½ (down). Two electrons can share an orbital only if their spins differ.</dd>
+        </dl>
+        <p class="hint" style="margin-top:12px">The real orbital shapes (like p<sub>x</sub> and d<sub>xy</sub>) don't match single m<sub>ℓ</sub> values one-to-one. The pairing shown here is a common classroom convention.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SHAPES ============ -->
+<section class="mod" id="mod-shapes" role="tabpanel">
+  <div class="mod-head">
+    <div class="eyebrow">Orbital gallery · all 30 orbitals</div>
+    <h2>Where an electron is likely to be found</h2>
+    <p>Each dot is one possible position of the electron, so dense regions are where it spends the most time. Colors show the two phases of the wave. A node is a surface where the electron is never found. Cut the orbital open to see the nodes inside.</p>
+  </div>
+  <div class="bench">
+    <div class="stack">
+      <div class="pair" id="sh-pair">
+        <div class="stage" id="sh-stage"><div class="cap"><div class="big" id="sh-cap"></div><div class="sm" id="sh-capsm"></div></div>
+          <div class="legend"><span><i class="dot" style="background:var(--pos)"></i> +</span><span><i class="dot" style="background:var(--neg)"></i> −</span></div></div>
+        <div class="stage" id="sh-stage2" hidden><div class="cap"><div class="big" id="sh-cap2"></div><div class="sm">pinned</div></div></div>
+      </div>
+      <div class="row" style="justify-content:space-between">
+        <div class="row">
+          <span class="label">View</span>
+          <div class="seg" id="sh-mode"><button data-v="whole" aria-pressed="true">Whole</button><button data-v="half">Cut in half</button><button data-v="slice">Thin slice</button></div>
+        </div>
+        <div class="row">
+          <span class="label">Size</span>
+          <div class="seg" id="sh-scale"><button data-v="fit" aria-pressed="true">Fit to view</button><button data-v="true">True size</button></div>
+        </div>
+      </div>
+      <div class="row">
+        <button class="btn" id="sh-spin" aria-pressed="false">Auto-rotate</button>
+        <button class="btn" id="sh-pin">Pin for comparison</button>
+        <span class="hint" id="sh-pinhint">Pin an orbital, then pick another to see them side by side.</span>
+      </div>
+      <div class="panel">
+        <div class="row" style="justify-content:space-between;margin-bottom:6px">
+          <span class="label">How far from the nucleus?</span>
+          <span class="row" id="sh-plotlegend" style="gap:14px;font-family:var(--mono);font-size:.72rem"></span>
+        </div>
+        <div class="plot-wrap"><canvas id="sh-plot" aria-label="Probability of finding the electron at each distance from the nucleus"></canvas><div class="tip" id="sh-tip" hidden></div></div>
+        <p class="hint" style="margin-top:6px">Peaks are the most likely distances. Where the curve touches zero is a radial node, a spherical shell with no electron.</p>
+      </div>
+    </div>
+    <div class="stack">
+      <div class="panel"><div class="label" style="margin-bottom:10px">Choose an orbital</div><div class="picker" id="sh-picker"></div></div>
+      <div class="panel stack">
+        <div class="facts">
+          <div><b id="sh-rn"></b><span>radial nodes</span></div>
+          <div><b id="sh-an"></b><span>angular nodes</span></div>
+          <div><b id="sh-tn"></b><span>total nodes</span></div>
+        </div>
+        <p class="note" id="sh-desc"></p>
+        <div class="hint">Patterns: a shell has <b>n − 1</b> nodes in total. <b>ℓ</b> of them are flat planes or cones (angular), and the rest are spheres (radial).</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ COUNTING ============ -->
+<section class="mod" id="mod-counting" role="tabpanel">
+  <div class="mod-head">
+    <div class="eyebrow">Shells, subshells, orbitals</div>
+    <h2>How many rooms on each floor?</h2>
+    <p>Shell n contains n subshells. Each subshell adds two more orbitals than the one before (1, 3, 5, 7), and every orbital holds two electrons. Tap a floor to see its totals.</p>
+  </div>
+  <div class="bench">
+    <div class="hotel" id="ct-hotel"></div>
+    <div class="stack">
+      <div class="panel">
+        <table class="tally" id="ct-table"></table>
+      </div>
+      <div class="panel stack">
+        <div class="label">Patterns to notice</div>
+        <p class="note" id="ct-pattern"></p>
+        <div class="row">
+          <button class="btn" id="ct-fill" aria-pressed="false">Fill every bed with electrons</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ENERGY ============ -->
+<section class="mod" id="mod-energy" role="tabpanel">
+  <div class="mod-head">
+    <div class="eyebrow">Madelung's rule</div>
+    <h2>Why 4s fills before 3d</h2>
+    <p>In hydrogen, with only one electron, every subshell in a shell has the same energy. With more electrons, they shield each other and the subshells split apart. Some even pass subshells from the shell above. Madelung's rule predicts the order: lowest <b>n + ℓ</b> first, and if two tie, lower <b>n</b> first.</p>
+  </div>
+  <div class="bench">
+    <div class="stack">
+      <div class="row" style="justify-content:space-between">
+        <div class="seg" id="en-atom"><button data-v="h">Hydrogen (1 electron)</button><button data-v="multi" aria-pressed="true">Many-electron atom</button></div>
+        <span class="hint">Dashed levels (5s, 5p, 6s) are beyond n = 4 but fill before 4d and 4f.</span>
+      </div>
+      <div class="panel ladder-wrap"><svg id="en-svg" viewBox="0 0 640 600" width="100%" style="min-width:520px;display:block" role="img" aria-label="Energy level diagram"></svg></div>
+    </div>
+    <div class="stack">
+      <div class="panel stack">
+        <div class="row" style="justify-content:space-between">
+          <span class="label">Step through the filling order</span>
+          <span class="mono" id="en-stepno" style="font-size:.8rem;color:var(--muted)"></span>
+        </div>
+        <div class="row">
+          <button class="btn" id="en-reset">Reset</button>
+          <button class="btn" id="en-prev">Back</button>
+          <button class="btn primary" id="en-next">Next subshell</button>
+          <button class="btn" id="en-play" aria-pressed="false">Play</button>
+        </div>
+        <p class="note" id="en-why" style="min-height:3em"></p>
+      </div>
+      <div class="panel">
+        <div class="label" style="margin-bottom:8px">Diagonal rule chart</div>
+        <div class="diag" id="en-diag"></div>
+        <p class="hint" style="margin-top:8px">Read along the diagonals, from top-right to bottom-left, starting at the top. Each diagonal is one n + ℓ value.</p>
+      </div>
+      <div class="panel">
+        <div class="row" style="justify-content:space-between;margin-bottom:8px">
+          <span class="label">Sort the subshells</span>
+          <div class="seg" id="en-sort"><button data-v="n">By shell</button><button data-v="mad" aria-pressed="true">By n + ℓ, then n</button></div>
+        </div>
+        <table class="mad" id="en-table"></table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FILLING ============ -->
+<section class="mod" id="mod-filling" role="tabpanel">
+  <div class="mod-head">
+    <div class="eyebrow">Electron configurations · H to Kr</div>
+    <h2>Adding electrons one at a time</h2>
+    <p>Three rules place each new electron. <b>Aufbau:</b> take the lowest-energy subshell with room. <b>Pauli:</b> at most two per orbital, with opposite spins. <b>Hund:</b> within a subshell, fill every orbital singly before pairing.</p>
+  </div>
+  <div class="bench">
+    <div class="stack">
+      <div class="panel stack">
+        <div class="el-card">
+          <div class="el-sym" id="fl-sym"></div>
+          <div class="stack" style="gap:6px">
+            <div class="row" style="justify-content:space-between"><h3 id="fl-name" style="font-size:1.5rem"></h3><span class="tag" id="fl-unpaired"></span></div>
+            <div class="config" id="fl-config"></div>
+            <div class="config sh" id="fl-short"></div>
+          </div>
+        </div>
+        <div class="row">
+          <button class="btn" id="fl-prev">− electron</button>
+          <input type="range" id="fl-z" min="1" max="36" value="26" aria-label="Atomic number" style="flex:1;min-width:140px">
+          <button class="btn primary" id="fl-next">+ electron</button>
+          <button class="btn" id="fl-play" aria-pressed="false">Build up from H</button>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="label" style="margin-bottom:10px">Orbital diagram (in filling order)</div>
+        <div class="diagram" id="fl-diagram"></div>
+      </div>
+    </div>
+    <div class="stack">
+      <div class="panel stack">
+        <div class="rule-card" id="fl-rule"></div>
+        <div class="exc" id="fl-exc" hidden></div>
+      </div>
+      <div class="panel stack">
+        <div class="row" style="justify-content:space-between">
+          <span class="label">Periodic table, rows 1–4</span>
+          <span class="row" style="gap:10px;font-family:var(--mono);font-size:.72rem">
+            <span><i class="dot" style="background:var(--s)"></i> s</span><span><i class="dot" style="background:var(--p)"></i> p</span><span><i class="dot" style="background:var(--d)"></i> d</span>
+          </span>
+        </div>
+        <div class="ptable" id="fl-ptable"></div>
+        <p class="hint">A block's color matches the subshell its last electron goes into. The table's shape follows the filling order.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PRACTICE ============ -->
+<section class="mod" id="mod-practice" role="tabpanel">
+  <div class="mod-head">
+    <div class="eyebrow">Practice</div>
+    <h2>Check your understanding</h2>
+    <p>Questions are generated fresh each time. Choose which kinds to include. Every answer comes with an explanation.</p>
+  </div>
+  <div class="stack">
+    <div class="row" style="justify-content:space-between">
+      <div class="q-types" id="pr-types"></div>
+      <span class="score" id="pr-score">0 of 0 correct this session</span>
+    </div>
+    <div class="bench">
+      <div class="panel q-card stack" id="pr-card"></div>
+      <div class="stack">
+        <div class="stage qstage" id="pr-stage" hidden><div class="cap"><div class="sm">drag to rotate</div></div>
+          <div class="legend"><span><i class="dot" style="background:var(--pos)"></i> +</span><span><i class="dot" style="background:var(--neg)"></i> −</span></div></div>
+        <div class="panel" id="pr-side"></div>
+      </div>
+    </div>
+  </div>
+</section>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+"use strict";
+/* ================= shared helpers ================= */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const h = (tag, attrs = {}, html) => { const e = document.createElement(tag); for (const k in attrs) { if (k === 'class') e.className = attrs[k]; else if (k === 'style') e.style.cssText = attrs[k]; else e.setAttribute(k, attrs[k]); } if (html != null) e.innerHTML = html; return e; };
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const LET = ['s', 'p', 'd', 'f'];
+const SUP = { 0: '⁰', 1: '¹', 2: '²', 3: '³', 4: '⁴', 5: '⁵', 6: '⁶', 7: '⁷', 8: '⁸', 9: '⁹' };
+const sup = n => String(n).split('').map(c => SUP[c]).join('');
+const rand = n => Math.floor(Math.random() * n);
+const pick = a => a[rand(a.length)];
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = rand(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const signed = m => m > 0 ? '+' + m : m < 0 ? '−' + (-m) : '0';
+
+const themeCbs = [];
+const onTheme = cb => themeCbs.push(cb);
+const fireTheme = () => themeCbs.forEach(cb => cb());
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', fireTheme);
+new MutationObserver(fireTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+/* ================= orbital catalogue ================= */
+// Angular shape functions for the real orbitals (unit direction x,y,z).
+const ANG = {
+  0: [{ m: 0, sub: '', f: () => 1, nodes: 'no angular nodes, so it is a sphere', plane: 'xz' }],
+  1: [
+    { m: -1, sub: 'y', f: (x, y, z) => y, nodes: 'one nodal plane (the xz-plane)', plane: 'xy' },
+    { m: 0, sub: 'z', f: (x, y, z) => z, nodes: 'one nodal plane (the xy-plane)', plane: 'xz' },
+    { m: 1, sub: 'x', f: (x, y, z) => x, nodes: 'one nodal plane (the yz-plane)', plane: 'xz' },
+  ],
+  2: [
+    { m: -2, sub: 'xy', f: (x, y, z) => x * y, nodes: 'two nodal planes (xz and yz)', plane: 'xy' },
+    { m: -1, sub: 'yz', f: (x, y, z) => y * z, nodes: 'two nodal planes (xy and xz)', plane: 'yz' },
+    { m: 0, sub: 'z²', f: (x, y, z) => 3 * z * z - 1, nodes: 'two nodal cones, which separate the lobes from the ring', plane: 'xz' },
+    { m: 1, sub: 'xz', f: (x, y, z) => x * z, nodes: 'two nodal planes (xy and yz)', plane: 'xz' },
+    { m: 2, sub: 'x²−y²', f: (x, y, z) => x * x - y * y, nodes: 'two nodal planes, on the diagonals between the x and y axes', plane: 'xy' },
+  ],
+  3: [
+    { m: -3, sub: 'y(3x²−y²)', f: (x, y, z) => y * (3 * x * x - y * y), nodes: 'three vertical nodal planes, which make six lobes around the z axis', plane: 'xy' },
+    { m: -2, sub: 'xyz', f: (x, y, z) => x * y * z, nodes: 'three nodal planes (xy, xz, yz), which make eight lobes', plane: 'diag' },
+    { m: -1, sub: 'yz²', f: (x, y, z) => y * (5 * z * z - 1), nodes: 'one nodal plane (xz) and two nodal cones', plane: 'yz' },
+    { m: 0, sub: 'z³', f: (x, y, z) => z * (5 * z * z - 3), nodes: 'one nodal plane (xy) and two nodal cones', plane: 'xz' },
+    { m: 1, sub: 'xz²', f: (x, y, z) => x * (5 * z * z - 1), nodes: 'one nodal plane (yz) and two nodal cones', plane: 'xz' },
+    { m: 2, sub: 'z(x²−y²)', f: (x, y, z) => z * (x * x - y * y), nodes: 'one nodal plane (xy) and two diagonal vertical planes', plane: 'xz' },
+    { m: 3, sub: 'x(x²−3y²)', f: (x, y, z) => x * (x * x - 3 * y * y), nodes: 'three vertical nodal planes, which make six lobes around the z axis', plane: 'xy' },
+  ],
+};
+const SHAPE_WORD = ['sphere', 'dumbbell', 'cloverleaf', 'many-lobed'];
+const ORBS = [];
+for (let n = 1; n <= 4; n++) for (let l = 0; l < n; l++) for (const a of ANG[l]) {
+  ORBS.push({ id: `${n}${LET[l]}${a.sub}`, n, l, ...a,
+    html: `${n}${LET[l]}${a.sub ? `<sub>${a.sub}</sub>` : ''}`,
+    shape: a.sub ? `${LET[l]}<sub>${a.sub}</sub>` : 's' });
+}
+const orbById = id => ORBS.find(o => o.id === id);
+const orbFor = (n, l, m) => ORBS.find(o => o.n === n && o.l === l && o.m === m);
+
+/* ---- radial part (hydrogen-like) ---- */
+function laguerre(k, a, x) {
+  if (k === 0) return 1;
+  let L0 = 1, L1 = 1 + a - x;
+  for (let i = 1; i < k; i++) { const L2 = ((2 * i + 1 + a - x) * L1 - (i + a) * L0) / (i + 1); L0 = L1; L1 = L2; }
+  return L1;
+}
+const radial = (n, l, r) => { const rho = 2 * r / n; return Math.pow(rho, l) * Math.exp(-rho / 2) * laguerre(n - l - 1, 2 * l + 1, rho); };
+const RMAX = n => 3.2 * n * n + 8;
+// Clouds sample a sharpened density (probability raised to this power) so the lobes read more compactly.
+// 1 = physically faithful; the radial graph always shows the true curve.
+const CLOUD_SHARPEN = 10;
+
+const radCache = {};
+function radialTable(n, l) {
+  const key = n + '' + l; if (radCache[key]) return radCache[key];
+  const N = 1500, rmax = RMAX(n), rs = new Float32Array(N), P = new Float32Array(N), cdf = new Float32Array(N), cdfC = new Float32Array(N);
+  let sum = 0, peak = 0, sumC = 0;
+  for (let i = 0; i < N; i++) { const r = rmax * i / (N - 1); const R = radial(n, l, r); rs[i] = r; P[i] = r * r * R * R; sum += P[i]; cdf[i] = sum; sumC += Math.pow(P[i], CLOUD_SHARPEN); cdfC[i] = sumC; }
+  for (let i = 0; i < N; i++) { cdf[i] /= sum; cdfC[i] /= sumC; P[i] = P[i] / sum * (N / rmax); if (P[i] > peak) peak = P[i]; }
+  let r99 = rmax; for (let i = 0; i < N; i++) if (cdf[i] >= 0.99) { r99 = rs[i]; break; }
+  let r99c = rmax; for (let i = 0; i < N; i++) if (cdfC[i] >= 0.99) { r99c = rs[i]; break; }
+  const nodes = []; let prev = radial(n, l, 0.01);
+  for (let i = 2; i < N; i++) { const v = radial(n, l, rs[i]); if (v * prev < 0) nodes.push(rs[i]); if (v !== 0) prev = v; }
+  return (radCache[key] = { rs, P, cdf, cdfC, r99, r99c, peak, nodes, rmax });
+}
+const TRUE_SCALE = () => radialTable(4, 0).r99c;
+
+/* ---- point sampling ---- */
+const sampleCache = {};
+function randDir() { let x, y, z, d; do { x = Math.random() * 2 - 1; y = Math.random() * 2 - 1; z = Math.random() * 2 - 1; d = x * x + y * y + z * z; } while (d > 1 || d < 1e-4); d = Math.sqrt(d); return [x / d, y / d, z / d]; }
+function sampleOrbital(o, count = 26000) {
+  if (sampleCache[o.id]) return sampleCache[o.id];
+  const T = radialTable(o.n, o.l);
+  let amax = 0; for (let i = 0; i < 4000; i++) { const [x, y, z] = randDir(); const v = Math.abs(o.f(x, y, z)) ** (2 * CLOUD_SHARPEN); if (v > amax) amax = v; }
+  amax *= 1.05;
+  const pos = new Float32Array(count * 3), sign = new Int8Array(count);
+  for (let i = 0; i < count; i++) {
+    const u = Math.random(); let lo = 0, hi = T.cdfC.length - 1;
+    while (lo < hi) { const mid = (lo + hi) >> 1; if (T.cdfC[mid] < u) lo = mid + 1; else hi = mid; }
+    const r = T.rs[lo] + (Math.random() - 0.5) * (T.rmax / T.cdf.length);
+    let d; do { d = randDir(); } while (Math.random() * amax > Math.abs(o.f(...d)) ** (2 * CLOUD_SHARPEN));
+    pos[i * 3] = d[0] * r; pos[i * 3 + 1] = d[1] * r; pos[i * 3 + 2] = d[2] * r;
+    sign[i] = (radial(o.n, o.l, r) * o.f(...d)) >= 0 ? 1 : -1;
+  }
+  return (sampleCache[o.id] = { pos, sign, r99: T.r99c });
+}
+// dense 2D cross-section in the orbital's best plane
+function sampleSlice(o, count = 16000) {
+  const key = o.id + '|slice'; if (sampleCache[key]) return sampleCache[key];
+  const T = radialTable(o.n, o.l), R = T.r99c * 1.1, SK = Math.sqrt(CLOUD_SHARPEN);
+  const c = Math.SQRT1_2;
+  const map = o.plane === 'xy' ? (a, b) => [a, b, 0] : o.plane === 'yz' ? (a, b) => [0, a, b] : o.plane === 'diag' ? (a, b) => [a * c, a * c, b] : (a, b) => [a, 0, b];
+  const dens = (a, b) => { const [x, y, z] = map(a, b); const r = Math.hypot(x, y, z) || 1e-6; return radial(o.n, o.l, r) * o.f(x / r, y / r, z / r); };
+  let dmax = 0; const G = 220;
+  for (let i = 0; i < G; i++) for (let j = 0; j < G; j++) { const v = Math.abs(dens(-R + 2 * R * i / G, -R + 2 * R * j / G)) ** SK; if (v > dmax) dmax = v; }
+  dmax *= 1.2;
+  const pos = new Float32Array(count * 3), sign = new Int8Array(count); let k = 0, guard = 0;
+  while (k < count && guard++ < 4e6) {
+    const a = -R + 2 * R * Math.random(), b = -R + 2 * R * Math.random(); const v = dens(a, b);
+    if (Math.random() * dmax < Math.abs(v) ** SK) { const [x, y, z] = map(a, b); pos[k * 3] = x; pos[k * 3 + 1] = y; pos[k * 3 + 2] = z; sign[k] = v >= 0 ? 1 : -1; k++; }
+  }
+  return (sampleCache[key] = { pos: pos.subarray(0, k * 3), sign: sign.subarray(0, k), r99: T.r99c });
+}
+
+/* ================= 3D viewer ================= */
+const viewers = [];
+class Viewer {
+  constructor(el) {
+    this.el = el; this.spin = false; this.mode = 'whole'; this.scaleMode = 'fit'; this.orb = null; this.follow = null; this.dirty = true;
+    const r = this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    r.setPixelRatio(Math.min(devicePixelRatio, 2)); r.localClippingEnabled = true; r.setClearColor(0, 0);
+    el.prepend(r.domElement);
+    this.scene = new THREE.Scene();
+    this.camera = new THREE.PerspectiveCamera(34, 4 / 3, 0.1, 50); this.camera.position.set(0, 0, 4.9);
+    this.outer = new THREE.Group(); this.inner = new THREE.Group(); this.inner.rotation.x = -Math.PI / 2;
+    this.outer.add(this.inner); this.scene.add(this.outer);
+    this.resetView();
+    this.axes = new THREE.Group(); this.inner.add(this.axes); this.buildAxes();
+    this.mat = new THREE.PointsMaterial({ size: 0.022, vertexColors: true, transparent: true, opacity: 0.75, depthWrite: false });
+    let drag = null;
+    el.addEventListener('pointerdown', e => { drag = [e.clientX, e.clientY]; el.setPointerCapture(e.pointerId); });
+    el.addEventListener('pointermove', e => { if (!drag) return; const dx = e.clientX - drag[0], dy = e.clientY - drag[1]; drag = [e.clientX, e.clientY];
+      const tgt = this.follow || this; tgt.outer.rotation.y += dx * 0.01; tgt.outer.rotation.x += dy * 0.01; tgt.dirty = true; this.dirty = true; });
+    el.addEventListener('pointerup', () => drag = null);
+    el.addEventListener('pointercancel', () => drag = null);
+    new ResizeObserver(() => this.resize()).observe(el);
+    onTheme(() => { this.recolor(); this.buildAxes(); });
+    viewers.push(this);
+  }
+  resetView() { this.outer.rotation.set(0.35, -0.6, 0); this.dirty = true; }
+  resize() { const w = this.el.clientWidth, hgt = this.el.clientHeight; if (!w || !hgt) return; this.renderer.setSize(w, hgt, false); this.camera.aspect = w / hgt; this.camera.updateProjectionMatrix(); this.dirty = true; }
+  buildAxes() {
+    this.axes.clear();
+    const ink = new THREE.Color(css('--muted'));
+    const mat = new THREE.LineBasicMaterial({ color: ink, transparent: true, opacity: 0.45 });
+    for (const [ax, v] of [['x', [1, 0, 0]], ['y', [0, 1, 0]], ['z', [0, 0, 1]]]) {
+      const g = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(...v).multiplyScalar(-1.15), new THREE.Vector3(...v).multiplyScalar(1.15)]);
+      this.axes.add(new THREE.Line(g, mat));
+      const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d');
+      x.fillStyle = css('--ink-2'); x.font = 'italic 600 40px Georgia, serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(ax, 32, 34);
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false }));
+      sp.position.set(...v.map(t => t * 1.27)); sp.scale.set(0.16, 0.16, 1); this.axes.add(sp);
+    }
+    this.dirty = true;
+  }
+  show(o) { this.orb = o; this.rebuild(); }
+  setMode(m) { const was = this.mode; this.mode = m; this.rebuild(); if (m === 'slice') this.facePlane(); else if (was === 'slice') this.resetView(); }
+  setScale(s) { this.scaleMode = s; this.applyScale(); }
+  facePlane() { const p = this.orb && this.orb.plane; this.outer.rotation.set(p === 'xy' ? Math.PI / 2 : 0, p === 'yz' ? -Math.PI / 2 : p === 'diag' ? -Math.PI / 4 : 0, 0); this.dirty = true; }
+  rebuild() {
+    if (!this.orb) return;
+    if (this.points) { this.inner.remove(this.points); this.points.geometry.dispose(); }
+    const S = this.mode === 'slice' ? sampleSlice(this.orb) : sampleOrbital(this.orb);
+    this.data = S;
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(S.pos, 3));
+    g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(S.sign.length * 3), 3));
+    this.points = new THREE.Points(g, this.mat); this.inner.add(this.points);
+    this.mat.clippingPlanes = this.mode === 'half' ? [new THREE.Plane(new THREE.Vector3(0, 0, -1), 0)] : [];
+    this.mat.size = this.mode === 'slice' ? 0.02 : 0.022; this.mat.needsUpdate = true;
+    if (this.mode === 'slice' && this.orb) this.facePlane();
+    this.recolor(); this.applyScale();
+  }
+  applyScale() { if (!this.points) return; const s = this.scaleMode === 'true' ? 1 / TRUE_SCALE() : 1 / this.data.r99; this.points.scale.setScalar(s); this.dirty = true; }
+  recolor() {
+    if (!this.points) return;
+    const a = new THREE.Color(css('--pos')), b = new THREE.Color(css('--neg')), col = this.points.geometry.attributes.color.array;
+    this.data.sign.forEach((s, i) => { const c = s > 0 ? a : b; col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b; });
+    this.points.geometry.attributes.color.needsUpdate = true; this.dirty = true;
+  }
+  visible() { return this.el.offsetParent !== null; }
+  frame() {
+    if (this.follow) { if (!this.outer.quaternion.equals(this.follow.outer.quaternion)) { this.outer.quaternion.copy(this.follow.outer.quaternion); this.dirty = true; } }
+    else if (this.spin) { this.outer.rotation.y += 0.006; this.dirty = true; }
+    if (this.dirty) { this.renderer.render(this.scene, this.camera); this.dirty = false; }
+  }
+}
+(function loop() { for (const v of viewers) if (v.visible()) v.frame(); requestAnimationFrame(loop); })();
+</script>
+
+<script>
+"use strict";
+/* ================= tabs ================= */
+const TABS = ['addresses', 'shapes', 'counting', 'energy', 'filling', 'practice'];
+const tabInit = {};
+function openTab(t) {
+  if (!TABS.includes(t)) t = 'shapes';
+  $$('nav.tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === t));
+  $$('section.mod').forEach(s => s.classList.toggle('on', s.id === 'mod-' + t));
+  if (tabInit[t]) { tabInit[t](); tabInit[t] = null; }
+  viewers.forEach(v => { v.resize(); v.dirty = true; });
+  if (location.hash.slice(1) !== t) history.replaceState(null, '', '#' + t);
+}
+$$('nav.tabs button').forEach(b => b.addEventListener('click', () => openTab(b.dataset.tab)));
+addEventListener('hashchange', () => openTab(location.hash.slice(1)));
+const segBind = (el, cb) => el.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; $$('button', el).forEach(x => x.setAttribute('aria-pressed', x === b)); cb(b.dataset.v); });
+
+/* ================= ADDRESSES ================= */
+tabInit.addresses = () => {
+  const st = { n: 3, l: 2, m: -1, s: 0.5 };
+  const viewer = new Viewer($('#ad-stage'));
+  const flash = $('#ad-flash');
+  const say = msg => { flash.innerHTML = msg; flash.hidden = false; };
+  function chips(el, values, isOk, cur, label, onBad, onPick) {
+    el.innerHTML = '';
+    for (const v of values) {
+      const ok = isOk(v), b = h('button', { 'aria-pressed': v === cur, class: ok ? '' : 'bad', 'aria-label': `${label} ${v}${ok ? '' : ' (not allowed)'}` }, label === 'ms' ? (v > 0 ? '+½' : '−½') : signed(v).replace('+0', '0'));
+      if (label === 'n' || label === 'l') b.textContent = v;
+      b.addEventListener('click', () => ok ? onPick(v) : onBad(v));
+      el.append(b);
+    }
+  }
+  function render() {
+    chips($('#ad-n'), [1, 2, 3, 4], () => true, st.n, 'n', null, v => { flash.hidden = true; st.n = v; if (st.l > v - 1) { say(`<strong>Adjusted ℓ.</strong> Shell ${v} only has ℓ = 0${v > 1 ? '…' + (v - 1) : ''}, so ℓ moved to ${v - 1}.`); st.l = v - 1; } if (Math.abs(st.m) > st.l) st.m = 0; render(); });
+    chips($('#ad-l'), [0, 1, 2, 3], v => v < st.n, st.l, 'l',
+      v => say(`<strong>ℓ = ${v} isn't allowed in shell ${st.n}.</strong> ℓ can only go up to n − 1. Shell ${st.n} has ${st.n} subshell${st.n > 1 ? 's' : ''} (${LET.slice(0, st.n).join(', ')}), so there is no ${st.n}${LET[v]}. The first ${LET[v]} subshell is ${v + 1}${LET[v]}.`),
+      v => { flash.hidden = true; st.l = v; if (Math.abs(st.m) > v) { say(`<strong>Adjusted m<sub>ℓ</sub>.</strong> With ℓ = ${v}, m<sub>ℓ</sub> runs from −${v} to +${v}.`); st.m = 0; } render(); });
+    chips($('#ad-m'), [-3, -2, -1, 0, 1, 2, 3], v => Math.abs(v) <= st.l, st.m, 'ml',
+      v => say(`<strong>m<sub>ℓ</sub> = ${signed(v)} isn't allowed when ℓ = ${st.l}.</strong> m<sub>ℓ</sub> runs from −ℓ to +ℓ, so a ${LET[st.l]} subshell has only ${2 * st.l + 1} orbital${st.l ? 's' : ''}.`),
+      v => { flash.hidden = true; st.m = v; render(); });
+    chips($('#ad-s'), [0.5, -0.5], () => true, st.s, 'ms', null, v => { flash.hidden = true; st.s = v; render(); });
+    const o = orbFor(st.n, st.l, st.m);
+    $('#ad-readout').innerHTML = `<span>n = <b>${st.n}</b></span><span>ℓ = <b>${st.l}</b></span><span>m<sub>ℓ</sub> = <b>${signed(st.m)}</b></span><span>m<sub>s</sub> = <b>${st.s > 0 ? '+½' : '−½'}</b></span>`;
+    $('#ad-sentence').innerHTML = `Shell <b>${st.n}</b> → the <b>${st.n}${LET[st.l]}</b> subshell → the <b>${o.html}</b> orbital → spin <b>${st.s > 0 ? 'up ↑' : 'down ↓'}</b>.`;
+    $('#ad-boxlabel').innerHTML = `The ${2 * st.l + 1} orbital${st.l ? 's' : ''} of ${st.n}${LET[st.l]} (m<sub>ℓ</sub> values below)`;
+    const bx = $('#ad-boxes'); bx.innerHTML = '';
+    for (let m = -st.l; m <= st.l; m++) {
+      const here = m === st.m;
+      bx.append(h('div', { class: 'box' + (here ? ' hl' : '') }, here ? `<span class="arrow">${st.s > 0 ? '↑' : '↓'}</span><span class="ml">${signed(m)}</span>` : `<span class="ml">${signed(m)}</span>`));
+    }
+    $('#ad-cap').innerHTML = o.html;
+    if (viewer.orb !== o) viewer.show(o);
+  }
+  render();
+};
+
+/* ================= SHAPES ================= */
+tabInit.shapes = () => {
+  const main = new Viewer($('#sh-stage'));
+  let second = null, pinned = null, cur = orbById('3dz²');
+  const picker = $('#sh-picker');
+  for (let n = 1; n <= 4; n++) {
+    const row = h('div', { class: 'pk-shell' }, `<div class="pk-n">${n}</div>`), subs = h('div', { class: 'pk-subs' });
+    for (let l = 0; l < n; l++) {
+      const g = h('div', { class: `pk-sub c-${LET[l]}`, role: 'group', 'aria-label': `${n}${LET[l]}` });
+      ORBS.filter(o => o.n === n && o.l === l).forEach(o => {
+        const b = h('button', { 'data-id': o.id, 'aria-pressed': 'false', title: o.id }, o.html); b.addEventListener('click', () => select(o)); g.append(b);
+      });
+      subs.append(g);
+    }
+    row.append(subs); picker.append(row);
+  }
+  function describe(o) {
+    const rn = o.n - o.l - 1;
+    const radialTxt = rn === 0 ? 'no radial nodes' : `${rn} radial node${rn > 1 ? 's' : ''} (spherical shell${rn > 1 ? 's' : ''} inside, easiest to see with <b>Thin slice</b>)`;
+    return `<b>${o.html}</b> is ${o.l === 0 ? 'a sphere' : o.sub === 'z²' ? 'a dumbbell with a doughnut-shaped ring around its middle' : `a ${SHAPE_WORD[o.l]} shape`}. It has ${o.nodes} and ${radialTxt}. Compared with other ${LET[o.l]} orbitals, a higher shell makes the same shape larger, with more nodes inside.`;
+  }
+  function select(o) {
+    cur = o; main.show(o);
+    $$('button', picker).forEach(b => { b.setAttribute('aria-pressed', b.dataset.id === o.id); b.classList.toggle('pinned', pinned && b.dataset.id === pinned.id); });
+    $('#sh-cap').innerHTML = o.html;
+    $('#sh-capsm').textContent = `n = ${o.n} · ℓ = ${o.l} · ${LET[o.l]} subshell`;
+    const rn = o.n - o.l - 1; $('#sh-rn').textContent = rn; $('#sh-an').textContent = o.l; $('#sh-tn').textContent = o.n - 1;
+    $('#sh-desc').innerHTML = describe(o);
+    drawPlot();
+  }
+  segBind($('#sh-mode'), v => { main.setMode(v); if (second) second.setMode(v); });
+  segBind($('#sh-scale'), v => { main.setScale(v); if (second) second.setScale(v); });
+  const spinBtn = $('#sh-spin');
+  spinBtn.addEventListener('click', () => { main.spin = !main.spin; spinBtn.setAttribute('aria-pressed', main.spin); });
+  $('#sh-pin').addEventListener('click', () => {
+    if (pinned) { pinned = null; $('#sh-stage2').hidden = true; $('#sh-pair').classList.remove('two'); $('#sh-pin').textContent = 'Pin for comparison'; $('#sh-pinhint').hidden = false; }
+    else {
+      pinned = cur; $('#sh-stage2').hidden = false; $('#sh-pair').classList.add('two');
+      if (!second) { second = new Viewer($('#sh-stage2')); second.follow = main; }
+      second.mode = main.mode; second.scaleMode = main.scaleMode; second.show(pinned);
+      $('#sh-cap2').innerHTML = pinned.html; $('#sh-pin').textContent = 'Unpin ' + pinned.id; $('#sh-pinhint').hidden = true;
+    }
+    select(cur);
+    requestAnimationFrame(() => viewers.forEach(v => v.resize()));
+  });
+
+  /* radial probability plot */
+  const cv = $('#sh-plot'), tip = $('#sh-tip');
+  let geom = null;
+  function drawPlot(hoverX) {
+    const dpr = Math.min(devicePixelRatio, 2), W = cv.clientWidth, H = cv.clientHeight;
+    if (!W) return;
+    cv.width = W * dpr; cv.height = H * dpr;
+    const x = cv.getContext('2d'); x.setTransform(dpr, 0, 0, dpr, 0, 0); x.clearRect(0, 0, W, H);
+    const series = [{ o: cur, dash: [] }]; if (pinned && pinned.id !== cur.id) series.push({ o: pinned, dash: [6, 4] });
+    const tables = series.map(s => radialTable(s.o.n, s.o.l));
+    const rTop = Math.max(...tables.map(t => t.r99)) * 1.1, pTop = Math.max(...tables.map(t => t.peak)) * 1.12;
+    const L = 12, R = 10, T = 8, B = 40, pw = W - L - R, ph = H - T - B;
+    const X = r => L + r / rTop * pw, Y = p => T + ph - p / pTop * ph;
+    geom = { X, rTop, L, pw, tables, series, Y };
+    const step = rTop > 40 ? 10 : rTop > 16 ? 5 : rTop > 8 ? 2 : 1;
+    x.font = '11px "JetBrains Mono", monospace'; x.textAlign = 'center';
+    for (let r = 0; r <= rTop; r += step) { x.strokeStyle = css('--rule-soft'); x.lineWidth = 1; x.beginPath(); x.moveTo(X(r), T); x.lineTo(X(r), T + ph); x.stroke(); x.fillStyle = css('--muted'); x.fillText(r, X(r), T + ph + 15); }
+    x.textAlign = 'right'; x.fillText('distance from nucleus, in Bohr radii (a₀) →', W - R, H - 3);
+    x.strokeStyle = css('--rule'); x.beginPath(); x.moveTo(L, T + ph); x.lineTo(L + pw, T + ph); x.stroke();
+    series.forEach((s, k) => {
+      const t = tables[k], col = css('--' + LET[s.o.l]);
+      x.beginPath(); x.moveTo(X(0), Y(0));
+      for (let i = 0; i < t.rs.length; i++) { if (t.rs[i] > rTop) break; x.lineTo(X(t.rs[i]), Y(t.P[i])); }
+      if (k === 0) { const g = x.createLinearGradient(0, T, 0, T + ph); g.addColorStop(0, col + '55'); g.addColorStop(1, col + '08'); x.lineTo(X(Math.min(t.rmax, rTop)), Y(0)); x.closePath(); x.fillStyle = g; x.fill(); x.beginPath(); x.moveTo(X(0), Y(0)); for (let i = 0; i < t.rs.length; i++) { if (t.rs[i] > rTop) break; x.lineTo(X(t.rs[i]), Y(t.P[i])); } }
+      x.setLineDash(s.dash); x.strokeStyle = col; x.lineWidth = 2; x.stroke(); x.setLineDash([]);
+      if (k === 0) t.nodes.forEach(r => { if (r > rTop) return; x.strokeStyle = css('--ink-2'); x.setLineDash([2, 3]); x.lineWidth = 1; x.beginPath(); x.moveTo(X(r), T + 14); x.lineTo(X(r), T + ph); x.stroke(); x.setLineDash([]); x.fillStyle = css('--ink-2'); x.textAlign = 'center'; x.fillText('node', X(r), T + 10); });
+    });
+    if (hoverX != null) { x.strokeStyle = css('--ink'); x.globalAlpha = .35; x.beginPath(); x.moveTo(hoverX, T); x.lineTo(hoverX, T + ph); x.stroke(); x.globalAlpha = 1; }
+    $('#sh-plotlegend').innerHTML = series.map(s => `<span class="row" style="gap:6px"><svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="${css('--' + LET[s.o.l])}" stroke-width="2" ${s.dash.length ? 'stroke-dasharray="6 4"' : ''}/></svg>${s.o.n}${LET[s.o.l]}</span>`).join('');
+  }
+  cv.addEventListener('pointermove', e => {
+    if (!geom) return; const rect = cv.getBoundingClientRect(), px = e.clientX - rect.left;
+    const r = (px - geom.L) / geom.pw * geom.rTop; if (r < 0 || r > geom.rTop) { tip.hidden = true; drawPlot(); return; }
+    drawPlot(px);
+    const parts = geom.series.map((s, k) => { const t = geom.tables[k]; const i = Math.min(t.rs.length - 1, Math.round(r / t.rmax * (t.rs.length - 1))); return `${s.o.n}${LET[s.o.l]} ${Math.round(t.P[i] / t.peak * 100)}% of peak`; });
+    tip.hidden = false; tip.style.left = Math.min(Math.max(px, 90), rect.width - 90) + 'px'; tip.style.top = '30px';
+    tip.textContent = `${r.toFixed(1)} a₀ · ${parts.join(' · ')}`;
+  });
+  cv.addEventListener('pointerleave', () => { tip.hidden = true; drawPlot(); });
+  new ResizeObserver(() => drawPlot()).observe(cv);
+  onTheme(() => drawPlot());
+  select(cur);
+};
+</script>
+
+<script>
+"use strict";
+/* ================= COUNTING ================= */
+tabInit.counting = () => {
+  let sel = 3, filled = false;
+  const hotel = $('#ct-hotel');
+  function render() {
+    hotel.innerHTML = '';
+    for (let n = 4; n >= 1; n--) {
+      const f = h('button', { class: 'floor', 'aria-pressed': n === sel, 'aria-label': `Shell ${n}` });
+      const halls = h('div', { class: 'halls' });
+      for (let l = 0; l < n; l++) {
+        const hall = h('div', { class: `hall c-${LET[l]}` }, `<span class="hn">${n}${LET[l]}</span>`), rooms = h('div', { class: 'rooms' });
+        for (let m = -l; m <= l; m++) rooms.append(h('div', { class: 'room' }, filled ? '↑↓' : ''));
+        hall.append(rooms); halls.append(hall);
+      }
+      f.append(h('div', { class: 'fl' }, `Floor ${n}<small>n = ${n}</small>`), halls);
+      f.addEventListener('click', () => { sel = n; render(); });
+      hotel.append(f);
+    }
+    const rows = [1, 2, 3, 4].map(n => {
+      const subs = LET.slice(0, n).map(c => n + c).join(', ');
+      return `<tr class="${n === sel ? 'sel' : ''}"><td>n = ${n}</td><td>${subs}</td><td class="${n === sel ? 'hi' : ''}">${n * n}</td><td class="${n === sel ? 'hi' : ''}">${2 * n * n}</td></tr>`;
+    }).join('');
+    $('#ct-table').innerHTML = `<thead><tr><th>Shell</th><th>Subshells</th><th>Orbitals</th><th>Electrons</th></tr></thead><tbody>${rows}</tbody>`;
+    const parts = LET.slice(0, sel).map((c, l) => `${sel}${c} has ${2 * l + 1}`);
+    $('#ct-pattern').innerHTML = `<b>Shell ${sel}:</b> ${parts.join(', ')}. That's ${Array.from({ length: sel }, (_, l) => 2 * l + 1).join(' + ')} = <b>${sel * sel} orbitals</b>, which hold <b>${2 * sel * sel} electrons</b>.<br><br>Down the orbitals column: 1, 4, 9, 16 are the square numbers (n × n). The electrons column is always double: 2, 8, 18, 32. Subshell sizes go up by odd numbers, s 1, p 3, d 5, f 7, because each subshell has one more m<sub>ℓ</sub> value on each side (−ℓ … +ℓ).`;
+  }
+  const fb = $('#ct-fill');
+  fb.addEventListener('click', () => { filled = !filled; fb.setAttribute('aria-pressed', filled); fb.textContent = filled ? 'Empty the beds' : 'Fill every bed with electrons'; render(); });
+  render();
+};
+
+/* ================= ENERGY ================= */
+const ORDER = [[1, 0], [2, 0], [2, 1], [3, 0], [3, 1], [4, 0], [3, 2], [4, 1], [5, 0], [4, 2], [5, 1], [6, 0], [4, 3]]
+  .map(([n, l], i) => ({ n, l, name: n + LET[l], ghost: n > 4, order: i + 1, sum: n + l }));
+tabInit.energy = () => {
+  const svg = $('#en-svg'), NS = 'http://www.w3.org/2000/svg';
+  const W = 760; svg.setAttribute('viewBox', `0 0 ${W} 600`);
+  const colX = [130, 240, 370, 540];
+  const MULTI = { '1s': 0, '2s': .22, '2p': .29, '3s': .40, '3p': .47, '4s': .56, '3d': .62, '4p': .68, '5s': .76, '4d': .82, '5p': .88, '6s': .95, '4f': 1 };
+  const HYD = { 1: 0, 2: .45, 3: .68, 4: .82, 5: .92, 6: 1 };
+  const yOf = t => 560 - t * 520;
+  let atom = 'multi', step = 0, timer = null;
+  const mk = (tag, a) => { const e = document.createElementNS(NS, tag); for (const k in a) e.setAttribute(k, a[k]); return e; };
+  // axis
+  svg.append(mk('line', { x1: 24, y1: 575, x2: 24, y2: 22, stroke: 'var(--ink-2)', 'stroke-width': 1.5 }));
+  svg.append(mk('path', { d: 'M18 30 L24 18 L30 30 Z', fill: 'var(--ink-2)' }));
+  const ax = mk('text', { x: 0, y: 0, transform: 'translate(14 320) rotate(-90)', 'text-anchor': 'middle', style: 'font:600 12px var(--mono);fill:var(--ink-2)' }); ax.textContent = 'ENERGY'; svg.append(ax);
+  LET.forEach((c, l) => { const t = mk('text', { x: colX[l], y: 592, style: 'font:600 12px var(--mono);fill:var(--muted)' }); t.textContent = c + ' (ℓ = ' + l + ')'; svg.append(t); });
+  const guides = mk('g', { style: 'transition:opacity .6s' });
+  for (let n = 1; n <= 6; n++) {
+    const y = yOf(HYD[n]) + 9;
+    guides.append(mk('line', { x1: 36, x2: W - 10, y1: y, y2: y, stroke: 'var(--rule)', 'stroke-dasharray': '2 4' }));
+    const t = mk('text', { x: 36, y: y - 4, style: 'font:11px var(--mono);fill:var(--muted)' }); t.textContent = 'n = ' + n; guides.append(t);
+  }
+  svg.append(guides);
+  const groups = ORDER.map(s => {
+    const g = mk('g', { class: `lvl c-${LET[s.l]}${s.ghost ? ' ghost' : ''}` });
+    for (let i = 0; i < 2 * s.l + 1; i++) g.append(mk('rect', { class: 'bx', x: i * 25, y: 0, width: 22, height: 18, rx: 2 }));
+    const t = mk('text', { class: 'lb', x: -7, y: 13, 'text-anchor': 'end' }); t.textContent = s.name; g.append(t);
+    svg.append(g); return g;
+  });
+  function place() {
+    ORDER.forEach((s, i) => {
+      const y = atom === 'h' ? yOf(HYD[s.n]) : yOf(MULTI[s.name]);
+      groups[i].style.transform = `translate(${colX[s.l]}px, ${y}px)`;
+      groups[i].classList.toggle('done', i < step - 1); groups[i].classList.toggle('now', i === step - 1);
+    });
+    guides.style.opacity = atom === 'h' ? 1 : 0;
+  }
+  segBind($('#en-atom'), v => { atom = v; place(); why(); });
+
+  // diagonal chart
+  const diag = $('#en-diag');
+  function renderDiag() {
+    diag.innerHTML = LET.map(c => `<div class="label" style="border:0">${c}</div>`).join('');
+    for (let n = 1; n <= 6; n++) for (let l = 0; l < 4; l++) {
+      const s = ORDER.find(o => o.n === n && o.l === l);
+      if (!s) { diag.append(h('div')); continue; }
+      const i = s.order - 1, cls = `cell c-${LET[l]}${s.ghost ? ' ghost' : ''}${i === step - 1 ? ' now' : i < step - 1 ? ' done' : ''}`;
+      diag.append(h('div', { class: cls }, `${s.name}<span class="k">${i < step ? '#' + s.order : 'n+ℓ=' + s.sum}</span>`));
+    }
+  }
+  // table
+  let sortBy = 'mad';
+  const tbl = $('#en-table');
+  function renderTable(animate) {
+    const first = {}; if (animate) $$('tbody tr', tbl).forEach(r => first[r.dataset.k] = r.getBoundingClientRect().top);
+    const rows = ORDER.slice().sort((a, b) => sortBy === 'n' ? a.n - b.n || a.l - b.l : a.order - b.order);
+    tbl.innerHTML = `<thead><tr><th>Subshell</th><th>n</th><th>ℓ</th><th>n + ℓ</th><th>Fills</th></tr></thead><tbody>${rows.map(s =>
+      `<tr data-k="${s.name}" class="${s.ghost ? 'ghost' : ''} ${s.order === step ? 'now' : ''}"><td style="color:var(--${LET[s.l]});font-weight:600">${s.name}</td><td>${s.n}</td><td>${s.l}</td><td class="sum">${s.sum}</td><td>${s.order <= step ? '#' + s.order : '·'}</td></tr>`).join('')}</tbody>`;
+    if (animate && !reduceMotion) $$('tbody tr', tbl).forEach(r => { const d = first[r.dataset.k] - r.getBoundingClientRect().top; if (!d) return; r.style.transition = 'none'; r.style.transform = `translateY(${d}px)`; requestAnimationFrame(() => { r.style.transition = ''; r.style.transform = ''; }); });
+  }
+  segBind($('#en-sort'), v => { sortBy = v; renderTable(true); });
+
+  function why() {
+    const el = $('#en-why');
+    $('#en-stepno').textContent = `${step} / ${ORDER.length}`;
+    if (step === 0) { el.innerHTML = atom === 'h' ? 'In hydrogen, the levels line up by shell: 3s, 3p and 3d have the same energy. Switch to <b>Many-electron atom</b> to see them split.' : 'Press <b>Next subshell</b> to fill subshells in order. Watch the diagonal chart and the table follow along.'; return; }
+    const s = ORDER[step - 1], ties = ORDER.filter(o => o.sum === s.sum && o !== s);
+    let t = `<b>${s.name}</b>: n + ℓ = ${s.n} + ${s.l} = <b>${s.sum}</b>. `;
+    const before = ties.filter(o => o.n < s.n), after = ties.filter(o => o.n > s.n);
+    if (before.length) t += `It ties with ${before.map(o => o.name).join(' and ')}, which ${before.length > 1 ? 'have' : 'has'} a lower n and went first. `;
+    if (after.length) t += `It ties with ${after.map(o => o.name).join(' and ')}, but ${s.name} has the lower n, so it goes first. `;
+    if (!ties.length) t += 'No other subshell here has this sum. ';
+    if (s.name === '4s') t += 'This is the famous case: 4s fills <i>before</i> 3d (n + ℓ = 5) even though it belongs to a higher shell.';
+    if (s.name === '3d') t += '3d comes after 4s because its n + ℓ is higher, so K and Ca get 4s electrons before Sc starts on 3d.';
+    if (s.ghost) t += `${s.name} is beyond n = 4, but it fills before the 4${s.n === 5 && s.l === 0 ? 'd' : 'f'} subshell.`;
+    if (s.name === '4d') t += 'Shell 4 is only finished long after shell 5 has started.';
+    if (s.name === '4f') t += 'The last subshell of shell 4 comes after 6s.';
+    el.innerHTML = t;
+  }
+  function update() { place(); renderDiag(); renderTable(false); why(); }
+  const setStep = k => { step = Math.max(0, Math.min(ORDER.length, k)); update(); };
+  const stopPlay = () => { clearInterval(timer); timer = null; $('#en-play').setAttribute('aria-pressed', 'false'); $('#en-play').textContent = 'Play'; };
+  $('#en-next').addEventListener('click', () => { stopPlay(); setStep(step + 1); });
+  $('#en-prev').addEventListener('click', () => { stopPlay(); setStep(step - 1); });
+  $('#en-reset').addEventListener('click', () => { stopPlay(); setStep(0); });
+  $('#en-play').addEventListener('click', () => {
+    if (timer) return stopPlay();
+    if (step >= ORDER.length) setStep(0);
+    $('#en-play').setAttribute('aria-pressed', 'true'); $('#en-play').textContent = 'Pause';
+    timer = setInterval(() => { if (step >= ORDER.length) return stopPlay(); setStep(step + 1); }, 1300);
+  });
+  setStep(7);
+  requestAnimationFrame(() => requestAnimationFrame(() => svg.classList.add('ready')));
+};
+</script>
+
+<script>
+"use strict";
+/* ================= configuration engine ================= */
+const ELEMENTS = 'H Hydrogen|He Helium|Li Lithium|Be Beryllium|B Boron|C Carbon|N Nitrogen|O Oxygen|F Fluorine|Ne Neon|Na Sodium|Mg Magnesium|Al Aluminum|Si Silicon|P Phosphorus|S Sulfur|Cl Chlorine|Ar Argon|K Potassium|Ca Calcium|Sc Scandium|Ti Titanium|V Vanadium|Cr Chromium|Mn Manganese|Fe Iron|Co Cobalt|Ni Nickel|Cu Copper|Zn Zinc|Ga Gallium|Ge Germanium|As Arsenic|Se Selenium|Br Bromine|Kr Krypton'
+  .split('|').map((s, i) => { const [sym, name] = s.split(' '); return { z: i + 1, sym, name }; });
+const FILL = ORDER.slice(0, 8); // 1s … 4p covers H–Kr
+const cap = l => 2 * (2 * l + 1);
+// electrons per subshell, following Madelung (exceptions optional)
+function configOf(z, exceptions = true) {
+  const c = FILL.map(s => ({ ...s, e: 0 })); let left = z;
+  for (const s of c) { const t = Math.min(cap(s.l), left); s.e = t; left -= t; }
+  if (exceptions && (z === 24 || z === 29)) { c[5].e = 1; c[6].e += 1; }
+  return c;
+}
+const configText = (c, from = 0) => c.slice(from).filter(s => s.e).map(s => `${s.name}${sup(s.e)}`).join(' ');
+const NOBLE = [[2, 'He'], [10, 'Ne'], [18, 'Ar']];
+function shortText(z, c) {
+  const core = NOBLE.filter(([nz]) => nz < z).pop();
+  if (!core) return configText(c);
+  const coreSubs = configOf(core[0]).filter(s => s.e).length;
+  return `[${core[1]}] ${configText(c, coreSubs)}`;
+}
+// orbital boxes: Hund — singles first, then pairs
+function boxesFor(s) { const k = 2 * s.l + 1; return Array.from({ length: k }, (_, i) => [i < s.e, i < s.e - k]); }
+function unpaired(c) { return c.reduce((a, s) => { const k = 2 * s.l + 1; return a + (s.e <= k ? s.e : 2 * k - s.e); }, 0); }
+const blockOf = z => { const c = configOf(z, false); return c.filter(s => s.e).pop().l; };
+const PT_POS = z => { // [row, column 1-18]
+  if (z <= 2) return [1, z === 1 ? 1 : 18];
+  const row = z <= 10 ? 2 : z <= 18 ? 3 : 4, start = [0, 0, 3, 11, 19][row], k = z - start;
+  if (row < 4) return [row, k < 2 ? k + 1 : k + 11];
+  return [row, k + 1];
+};
+function diagramHTML(c, opts = {}) {
+  return c.filter(s => s.e || opts.showEmpty).map((s, idx) => {
+    const bx = opts.boxes ? opts.boxes[s.name] : boxesFor(s);
+    return `<div class="sub-g c-${LET[s.l]}${opts.fresh && opts.fresh.sub === s.name ? ' new' : ''}"><span class="nm">${s.name}</span><div class="boxes">${bx.map(([u, d], i) => {
+      const fr = opts.fresh && opts.fresh.sub === s.name && opts.fresh.box === i;
+      return `<div class="box"><span class="arrow${fr && !opts.fresh.down ? ' fresh' : ''}">${u === true ? '↑' : u === 'd' ? '↓' : ''}</span><span class="arrow${fr && opts.fresh.down ? ' fresh' : ''}">${d === true ? '↓' : d === 'u' ? '↑' : ''}</span></div>`;
+    }).join('')}</div></div>`;
+  }).join('');
+}
+
+/* ================= FILLING ================= */
+tabInit.filling = () => {
+  let z = 26, timer = null;
+  const slider = $('#fl-z'), pt = $('#fl-ptable');
+  pt.style.gridTemplateRows = 'repeat(4, auto)';
+  ELEMENTS.forEach(el => {
+    const [r, col] = PT_POS(el.z), b = h('button', { class: `c-${LET[blockOf(el.z)]}`, style: `grid-row:${r};grid-column:${col}`, title: `${el.z} ${el.name}`, 'aria-label': `${el.name}, ${el.z}` }, el.sym);
+    b.addEventListener('click', () => { stop(); set(el.z); }); pt.append(b);
+  });
+  function newestElectron(z) {
+    const a = configOf(z - 1), b = configOf(z);
+    if (z === 24 || z === 25 || z === 29 || z === 30) return null;
+    const i = b.findIndex((s, k) => s.e !== a[k].e), s = b[i], k = 2 * s.l + 1;
+    return s.e <= k ? { sub: s.name, box: s.e - 1, down: false, s, k } : { sub: s.name, box: s.e - k - 1, down: true, s, k };
+  }
+  function set(nz) {
+    z = Math.max(1, Math.min(36, nz)); slider.value = z;
+    const el = ELEMENTS[z - 1], c = configOf(z), l = blockOf(z);
+    const sym = $('#fl-sym'); sym.className = `el-sym c-${LET[l]}`; sym.innerHTML = `<span>${z}</span><b>${el.sym}</b>`;
+    $('#fl-name').textContent = el.name;
+    const up = unpaired(c); $('#fl-unpaired').textContent = `${up} unpaired electron${up === 1 ? '' : 's'}`;
+    $('#fl-config').textContent = configText(c);
+    $('#fl-short').textContent = z > 2 ? 'Shorthand: ' + shortText(z, c) : 'No noble-gas core yet';
+    const fr = newestElectron(z);
+    $('#fl-diagram').innerHTML = diagramHTML(c, { fresh: fr });
+    $$('button', pt).forEach((b, i) => { b.setAttribute('aria-pressed', i + 1 === z); b.classList.toggle('filled', i + 1 < z); });
+    const rule = $('#fl-rule'), exc = $('#fl-exc'); exc.hidden = true;
+    if (!fr) {
+      if (z === 24 || z === 29) {
+        rule.innerHTML = `<h3>An exception: ${el.name}</h3><p class="note">Madelung's rule predicts ${configText(configOf(z, false), 5)} for the outer electrons.</p>`;
+        exc.hidden = false;
+        exc.innerHTML = `Instead, ${el.name} is <b>${shortText(z, c)}</b>. One 4s electron moves into 3d, making a ${z === 24 ? '<b>half-filled</b> 3d subshell (5 unpaired electrons)' : '<b>completely filled</b> 3d subshell'}. Half-filled and filled d subshells are extra stable, and 4s and 3d are so close in energy that the switch is worth it.`;
+      } else {
+        rule.innerHTML = `<h3>Back on track: ${el.name}</h3><p class="note">The element before this one was an exception. ${el.name} returns to the expected pattern with two 4s electrons: ${shortText(z, c)}.</p>`;
+      }
+      return;
+    }
+    const s = fr.s, sub = s.name;
+    if (z === 1) rule.innerHTML = `<h3>Aufbau</h3><p class="note">The first electron goes into 1s, the lowest-energy orbital.</p>`;
+    else if (!fr.down && fr.box === 0 && s.l === 0) rule.innerHTML = `<h3>Aufbau</h3><p class="note">Every lower subshell is full, so the new electron starts the next subshell in Madelung order: <b>${sub}</b>.${sub === '4s' ? ' 4s comes before 3d.' : ''}</p>`;
+    else if (!fr.down && fr.box === 0) rule.innerHTML = `<h3>Aufbau</h3><p class="note">The subshells below are full, so the electron starts <b>${sub}</b>, the next one in filling order.${sub === '3d' ? ' 3d starts only after 4s is full.' : ''}</p>`;
+    else if (!fr.down) rule.innerHTML = `<h3>Hund's rule</h3><p class="note">${sub} still has an empty orbital, so the new electron takes that orbital alone, with the same spin (↑) as the others. Electrons spread out before they pair up.</p>`;
+    else rule.innerHTML = `<h3>Pauli exclusion principle</h3><p class="note">Every ${sub} orbital already has one electron. The new electron has to pair up, and it must have the <b>opposite spin</b> (↓), because two electrons in one orbital can't have the same four quantum numbers.</p>`;
+  }
+  const stop = () => { clearInterval(timer); timer = null; $('#fl-play').setAttribute('aria-pressed', 'false'); $('#fl-play').textContent = 'Build up from H'; };
+  slider.addEventListener('input', () => { stop(); set(+slider.value); });
+  $('#fl-prev').addEventListener('click', () => { stop(); set(z - 1); });
+  $('#fl-next').addEventListener('click', () => { stop(); set(z + 1); });
+  $('#fl-play').addEventListener('click', () => {
+    if (timer) return stop();
+    set(1); $('#fl-play').setAttribute('aria-pressed', 'true'); $('#fl-play').textContent = 'Pause';
+    timer = setInterval(() => { if (z >= 36) return stop(); set(z + 1); }, 1400);
+  });
+  set(z);
+};
+</script>
+
+<script>
+"use strict";
+/* ================= PRACTICE ================= */
+const fmtSet = (n, l, m, s) => `(n, ℓ, m<sub>ℓ</sub>, m<sub>s</sub>) = (${n}, ${l}, ${signed(m)}, ${s})`;
+function numOpts(right, pool) {
+  const set = [right]; for (const v of shuffle(pool)) { if (set.length === 4) break; if (v >= 0 && !set.includes(v)) set.push(v); }
+  let k = 1; while (set.length < 4) { if (!set.includes(right + k)) set.push(right + k); k++; }
+  const opts = shuffle(set); return { options: opts.map(String), answer: opts.indexOf(right) };
+}
+function withAnswer(right, wrongs) { const all = shuffle([right, ...[...new Set(wrongs)].filter(w => w !== right).slice(0, 3)]); return { options: all, answer: all.indexOf(right) }; }
+
+const GEN = {
+  qn: { label: 'Valid quantum numbers', ref: 'n: 1, 2, 3…<br>ℓ: 0 up to n − 1<br>m<sub>ℓ</sub>: −ℓ up to +ℓ<br>m<sub>s</sub>: +½ or −½', make() {
+    const n = 1 + rand(4); let l = rand(n), m = rand(2 * l + 1) - l, s = pick(['+½', '−½']), ok = true, why;
+    const kind = rand(4);
+    if (kind === 1 && n < 4) { l = n + rand(4 - n); m = rand(2 * l + 1) - l; ok = false; why = `ℓ must be less than n. With n = ${n}, ℓ can be at most ${n - 1}, but here ℓ = ${l}.`; }
+    else if (kind === 2 && l < 3) { m = pick([1, -1]) * (l + 1); ok = false; why = `m<sub>ℓ</sub> must be between −ℓ and +ℓ. With ℓ = ${l}, m<sub>ℓ</sub> = ${signed(m)} is out of range.`; }
+    else if (kind === 3 && Math.random() < .5) { s = pick(['0', '+1', '−1']); ok = false; why = `m<sub>s</sub> can only be +½ or −½. The value ${s} isn't a possible spin.`; }
+    if (ok) why = `All four fit: ℓ = ${l} is less than n = ${n}, m<sub>ℓ</sub> = ${signed(m)} is within ±${l}, and m<sub>s</sub> is ${s}. This electron is in a ${n}${LET[l]} orbital.`;
+    return { prompt: `Is this set of quantum numbers allowed?<br><span class="mono" style="font-size:1.05rem;font-weight:400">${fmtSet(n, l, m, s)}</span>`, options: ['Allowed', 'Not allowed'], answer: ok ? 0 : 1, explain: why };
+  } },
+  count: { label: 'Counting', ref: 'Subshell orbitals: s 1, p 3, d 5, f 7<br>Shell n: n subshells, n × n orbitals<br>Every orbital holds 2 electrons', make() {
+    const n = 1 + rand(4), l = rand(n), k = 2 * l + 1, sub = `${n}${LET[l]}`;
+    const v = rand(5);
+    if (v === 0) return { prompt: `How many orbitals are in the ${sub} subshell?`, ...numOpts(k, [k + 2, k - 2, 2 * k, l, n]), explain: `A ${LET[l]} subshell has ℓ = ${l}, and m<sub>ℓ</sub> runs from −${l} to +${l}. That's ${k} value${k > 1 ? 's' : ''}, so ${k} orbital${k > 1 ? 's' : ''}. The shell number doesn't change this.` };
+    if (v === 1) return { prompt: `What is the maximum number of electrons in the ${sub} subshell?`, ...numOpts(2 * k, [k, 2 * k + 4, 2 * k - 4, 2 * n * n]), explain: `${sub} has ${k} orbital${k > 1 ? 's' : ''}, and each holds 2 electrons, so the maximum is ${2 * k}.` };
+    if (v === 2) return { prompt: `How many orbitals are in shell n = ${n}?`, ...numOpts(n * n, [2 * n * n, 2 * n, n, (n + 1) * (n + 1)]), explain: `Shell ${n} has ${LET.slice(0, n).map((c, i) => `${n}${c} (${2 * i + 1})`).join(' + ')} = ${n * n} orbitals.` };
+    if (v === 3) return { prompt: `How many electrons can shell n = ${n} hold?`, ...numOpts(2 * n * n, [n * n, 8, 2 * n, 4 * n]), explain: `Shell ${n} has ${n * n} orbitals, and each holds 2 electrons, so it can hold ${2 * n * n}.` };
+    return { prompt: `How many different subshells does shell n = ${n} have?`, ...numOpts(n, [n * n, n - 1, n + 1, 2 * n]), explain: `ℓ can be 0 up to ${n - 1}, so shell ${n} has ${n} subshell${n > 1 ? 's' : ''}: ${LET.slice(0, n).map(c => n + c).join(', ')}.` };
+  } },
+  shape: { label: 'Name the shape', stage: true, ref: 's: sphere<br>p: dumbbell along an axis<br>d: four-leaf clover (d<sub>z²</sub> is a dumbbell with a ring)<br>f: many lobes<br>The z axis points up.', make() {
+    const o = pick(ORBS.filter(x => x.l > 0 || Math.random() < .15));
+    const same = shuffle(ORBS.filter(x => x.l === o.l && x.shape !== o.shape).map(x => x.shape));
+    const other = shuffle(ORBS.filter(x => x.l !== o.l).map(x => x.shape));
+    const w = [...same.slice(0, 2), ...other]; const r = withAnswer(o.shape, w);
+    return { prompt: 'Which orbital is shown? Drag it to rotate.', ...r, orb: o, mode: 'whole', explain: `This is ${o.html}. It has ${o.nodes}.` };
+  } },
+  nodes: { label: 'Count nodes', stage: true, ref: 'Total nodes = n − 1<br>Angular nodes (planes or cones) = ℓ<br>Radial nodes (spheres) = n − ℓ − 1', make() {
+    const o = pick(ORBS.filter(x => x.n > 1)); const kind = pick(['radial', 'angular', 'total']);
+    const val = kind === 'radial' ? o.n - o.l - 1 : kind === 'angular' ? o.l : o.n - 1;
+    return { prompt: `The picture shows ${o.html} as a thin slice. How many <b>${kind}</b> nodes does it have?`, ...numOpts(val, [0, 1, 2, 3]), orb: o, mode: 'slice',
+      explain: `${o.html} has n = ${o.n} and ℓ = ${o.l}. Angular nodes = ℓ = ${o.l}. Radial nodes = n − ℓ − 1 = ${o.n - o.l - 1}. Total = n − 1 = ${o.n - 1}.` };
+  } },
+  order: { label: 'Filling order', ref: 'Lower n + ℓ fills first.<br>If n + ℓ ties, lower n fills first.<br>1s 2s 2p 3s 3p 4s 3d 4p 5s 4d 5p 6s 4f', make() {
+    const pool = ORDER;
+    if (Math.random() < .5) {
+      const pairs = [['4s', '3d'], ['5s', '4d'], ['4p', '3d'], ['4f', '6s'], ['3p', '4s'], ['4d', '5p'], ['3d', '5s']];
+      let [a, b] = Math.random() < .6 ? pick(pairs) : shuffle(pool.slice(0, 11)).slice(0, 2).map(s => s.name);
+      const A = pool.find(s => s.name === a), B = pool.find(s => s.name === b), first = A.order < B.order ? A : B, second = first === A ? B : A;
+      const opts = shuffle([a, b]);
+      const tie = A.sum === B.sum;
+      return { prompt: `Which subshell fills first: <span class="mono">${opts[0]}</span> or <span class="mono">${opts[1]}</span>?`, options: opts, answer: opts.indexOf(first.name),
+        explain: `${first.name}: n + ℓ = ${first.sum}. ${second.name}: n + ℓ = ${second.sum}. ${tie ? `They tie, so the lower n (${first.name}) fills first.` : `${first.name} has the lower sum, so it fills first.`}` };
+    }
+    const chosen = shuffle(pool.slice(0, 12)).slice(0, 4);
+    return { tap: chosen, prompt: 'Tap these subshells in the order they fill.' };
+  } },
+  config: { label: 'Configurations', ref: 'Fill in Madelung order.<br>Noble-gas shorthand: [He], [Ne], [Ar] replace the core.<br>Exceptions to know: Cr [Ar] 3d⁵ 4s¹, Cu [Ar] 3d¹⁰ 4s¹', make() {
+    const z = 3 + rand(34), el = ELEMENTS[z - 1], right = shortText(z, configOf(z));
+    const shellOrder = zz => { const order = [[1, 0], [2, 0], [2, 1], [3, 0], [3, 1], [3, 2], [4, 0], [4, 1]]; let left = zz; const c = order.map(([n, l]) => { const e = Math.min(cap(l), left); left -= e; return { n, l, name: n + LET[l], e }; }); return c; };
+    const wrongs = [];
+    if (z === 24 || z === 29) wrongs.push(shortText(z, configOf(z, false)));
+    if (z > 20) { const so = shellOrder(z); wrongs.push('[Ar] ' + so.slice(5).filter(s => s.e).map(s => s.name + sup(s.e)).join(' ')); }
+    [z - 1, z + 1, z - 2, z + 2, z + 3, z - 3].filter(v => v > 2 && v <= 36).forEach(v => wrongs.push(shortText(v, configOf(v))));
+    if (Math.random() < .5) {
+      const r = withAnswer(right, wrongs);
+      return { prompt: `Which is the ground-state electron configuration of <b>${el.name}</b> (Z = ${z})?`, options: r.options.map(t => `<span class="mono">${t}</span>`), answer: r.answer,
+        explain: `${el.name} has ${z} electrons: <span class="mono">${configText(configOf(z))}</span>, or <span class="mono">${right}</span>.${z === 24 || z === 29 ? ' It is one of the exceptions: a half-filled or filled 3d subshell is extra stable.' : ''}` };
+    }
+    const names = [z - 1, z + 1, z - 2, z + 2, z - 8, z + 8].filter(v => v >= 1 && v <= 36).map(v => ELEMENTS[v - 1].name);
+    const r = withAnswer(el.name, names);
+    return { prompt: `Which element has this configuration?<br><span class="mono" style="font-weight:400">${right}</span>`, ...r,
+      explain: `Count the electrons: the core ${right.startsWith('[') ? right.slice(0, 4) + ' has ' + { He: 2, Ne: 10, Ar: 18 }[right.slice(1, 3)] + ', plus' : 'has'} the rest, for ${z} in total. Element ${z} is ${el.name}.` };
+  } },
+  errors: { label: 'Spot the error', ref: 'Aufbau: lowest energy first<br>Pauli: max two per orbital, opposite spins<br>Hund: fill each orbital singly (same spin) before pairing', make() {
+    const opts = ['Follows all three rules', 'Breaks the Aufbau principle', 'Breaks the Pauli principle', "Breaks Hund's rule"];
+    const zs = [5, 6, 7, 8, 9, 13, 14, 15, 16, 17, 21, 22, 23, 25, 26, 27, 28, 31, 32, 33, 34, 35];
+    for (let tries = 0; tries < 40; tries++) {
+      const z = pick(zs), c = configOf(z), kind = pick(['ok', 'aufbau', 'pauli', 'hund']), el = ELEMENTS[z - 1];
+      const occ = c.filter(s => s.e);
+      let boxes = {}; occ.forEach(s => boxes[s.name] = boxesFor(s));
+      let explain, shown = occ;
+      if (kind === 'ok') explain = `This diagram for ${el.name} is correct. Subshells fill in order, paired electrons have opposite spins, and each subshell fills singly before pairing.`;
+      if (kind === 'hund') {
+        const s = occ.filter(x => x.l > 0 && x.e >= 2 && x.e <= 2 * x.l + 1).pop(); if (!s) continue;
+        const k = 2 * s.l + 1; boxes[s.name] = Array.from({ length: k }, (_, i) => i === 0 ? [true, true] : [i < s.e - 1, false]);
+        explain = `In ${s.name}, two electrons are paired while another ${s.name} orbital is empty. Hund's rule says to place them singly first, all with the same spin.`;
+      }
+      if (kind === 'pauli') {
+        const s = occ.filter(x => x.e > 2 * x.l + 1 || (x.l === 0 && x.e === 2)).pop(); if (!s) continue;
+        const bx = boxesFor(s), i = bx.findIndex(b => b[1]); bx[i] = [true, 'u']; boxes[s.name] = bx;
+        explain = `One ${s.name} orbital has two electrons with the same spin (↑↑). The Pauli principle requires paired electrons to have opposite spins.`;
+      }
+      if (kind === 'aufbau') {
+        const last = c.map(s => s.e > 0).lastIndexOf(true); const lower = last - 1, next = last + 1;
+        if (lower < 0 || next >= c.length) continue;
+        const mod = c.map(s => ({ ...s }));
+        if (Math.random() < .5 && mod[lower].e === cap(mod[lower].l) && mod[last].e < cap(mod[last].l) && !(mod[lower].name === '4s' && mod[last].name === '3d')) { mod[lower].e--; mod[last].e++; explain = `${mod[lower].name} is missing an electron while a higher-energy subshell (${mod[last].name}) has one extra. Lower-energy subshells must fill first.`; }
+        else { if (mod[last].name === '3d' || mod[last].name === '4s') continue; mod[last].e--; mod[next].e++; explain = `An electron sits in ${mod[next].name} while ${mod[last].name} still has room. The Aufbau principle says to fill the lower-energy subshell first.`; }
+        shown = mod.filter(s => s.e); boxes = {}; shown.forEach(s => boxes[s.name] = boxesFor(s));
+      }
+      return { prompt: `Here is an orbital diagram for <b>${el.name}</b>. Is anything wrong?`, extra: `<div class="diagram">${diagramHTML(shown, { boxes })}</div>`, options: opts, answer: ['ok', 'aufbau', 'pauli', 'hund'].indexOf(kind), explain };
+    }
+    return GEN.count.make();
+  } },
+};
+
+tabInit.practice = () => {
+  const on = new Set(Object.keys(GEN));
+  let right = 0, total = 0, viewer = null;
+  const typesEl = $('#pr-types'), card = $('#pr-card'), side = $('#pr-side'), stage = $('#pr-stage');
+  Object.entries(GEN).forEach(([k, g]) => {
+    const b = h('button', { class: 'btn', 'aria-pressed': 'true', id: 'pr-type-' + k }, g.label);
+    b.addEventListener('click', () => { if (on.has(k) && on.size === 1) return; on.has(k) ? on.delete(k) : on.add(k); b.setAttribute('aria-pressed', on.has(k)); next(); });
+    typesEl.append(b);
+  });
+  const score = () => $('#pr-score').textContent = `${right} of ${total} correct this session`;
+  function next() {
+    const key = pick([...on]), g = GEN[key], q = g.make();
+    side.innerHTML = `<div class="label" style="margin-bottom:8px">Quick reference · ${g.label}</div><p class="note">${g.ref}</p>`;
+    stage.hidden = !q.orb;
+    if (q.orb) { if (!viewer) viewer = new Viewer(stage); viewer.resetView(); viewer.mode = q.mode; viewer.show(q.orb); if (q.mode === 'slice') viewer.facePlane(); requestAnimationFrame(() => viewer.resize()); }
+    card.innerHTML = `<div class="label">${g.label}</div><div class="q-prompt">${q.prompt}</div>${q.extra || ''}`;
+    const nextBtn = h('button', { class: 'btn primary', id: 'pr-next' }, 'Next question'); nextBtn.addEventListener('click', next);
+    const finish = (ok, html) => { total++; if (ok) right++; score(); card.append(h('div', { class: 'fb ' + (ok ? 'ok' : 'no') }, `<strong>${ok ? 'Correct' : 'Not quite'}</strong>${html}`), h('div', { class: 'row' }, null)); card.lastChild.append(nextBtn); nextBtn.focus(); };
+    if (q.tap) {
+      const seq = []; const wrap = h('div', { class: 'tapseq' });
+      q.tap.forEach(s => {
+        const b = h('button', { class: `c-${LET[s.l]}` }, s.name); wrap.append(b);
+        b.addEventListener('click', () => {
+          seq.push(s); b.disabled = true; b.innerHTML = `${s.name}<span class="ord">#${seq.length}</span>`;
+          if (seq.length === q.tap.length) {
+            const correct = q.tap.slice().sort((a, b) => a.order - b.order);
+            const ok = seq.every((s, i) => s === correct[i]);
+            finish(ok, `Filling order: <span class="mono">${correct.map(s => `${s.name} (n+ℓ=${s.sum})`).join(' → ')}</span>. Lower n + ℓ goes first. For a tie, lower n goes first.`);
+          }
+        });
+      });
+      card.append(wrap); return;
+    }
+    const grid = h('div', { class: 'opts' });
+    q.options.forEach((o, i) => {
+      const b = h('button', {}, o); grid.append(b);
+      b.addEventListener('click', () => {
+        $$('button', grid).forEach((x, j) => { x.disabled = true; if (j === q.answer) x.classList.add('right'); });
+        if (i !== q.answer) b.classList.add('wrong');
+        finish(i === q.answer, q.explain);
+      });
+    });
+    card.append(grid);
+  }
+  next();
+};
+
+openTab(location.hash.slice(1) || 'shapes');
+</script>

@@ -1,0 +1,694 @@
+<title>Madelung's Madness</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Silkscreen:wght@400;700&display=swap">
+<style>
+:root{
+  --ground:#0b0d18; --panel:#131728; --panel2:#1a1f35; --line:#2a3152; --text:#e4e9ff; --muted:#8a93b8;
+  --s:#ff5a74; --p:#ffc53d; --d:#3fb8ff; --f:#6fe08a; --bad:#ff3b3b; --orb:#f2f5ff; --ink:#0b0d18;
+  --pixel:"Silkscreen","Courier New",monospace;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{
+  background-color:var(--ground);
+  background-image:
+    linear-gradient(rgba(42,49,82,.28) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(42,49,82,.28) 1px,transparent 1px);
+  background-size:28px 28px;
+  color:var(--text); font-family:var(--mono); font-size:14px; line-height:1.45;
+  padding-inline:16px;
+}
+*{box-sizing:border-box}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--p);outline-offset:2px}
+
+.app{max-width:1220px;margin:0 auto;padding-block:20px 32px;display:flex;flex-direction:column;gap:18px}
+
+/* ---------- header ---------- */
+.top{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.logo{width:62px;height:62px;flex:none;background:var(--f);color:var(--ink);border-radius:3px;position:relative;
+  box-shadow:inset 0 4px 0 rgba(255,255,255,.4),inset 0 -5px 0 rgba(0,0,0,.28),inset 4px 0 0 rgba(255,255,255,.18),inset -4px 0 0 rgba(0,0,0,.18)}
+.logo .z{position:absolute;top:6px;left:8px;font:600 10px var(--mono)}
+.logo .sym{position:absolute;inset:0;display:grid;place-items:center;padding-top:10px;font:700 27px var(--mono);letter-spacing:-.02em}
+h1{margin:0;font:700 clamp(22px,4.2vw,40px)/1 var(--pixel);letter-spacing:.02em;text-wrap:balance}
+h1 .a{color:var(--s)} h1 .b{color:var(--p)}
+.tag{margin:6px 0 0;color:var(--muted);font-size:13px}
+.tag b{color:var(--text);font-weight:600}
+
+/* ---------- stage ---------- */
+.stage{display:grid;grid-template-columns:minmax(170px,210px) minmax(0,620px) minmax(270px,320px);gap:22px;justify-content:center;align-items:stretch}
+.hud{display:flex;flex-direction:column;gap:14px}
+.hud > .box:last-child{flex:1}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin:8px 0 14px;padding:3px;background:var(--panel2);border:1px solid var(--line);border-radius:4px}
+.seg button{border:0;background:transparent;border-radius:2px;padding:6px 0;font:700 11px var(--pixel);letter-spacing:.04em;cursor:pointer;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--d);color:var(--ink);box-shadow:inset 0 2px 0 rgba(255,255,255,.35),inset 0 -3px 0 rgba(0,0,0,.25)}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:14px}
+.lbl{font:400 11px var(--pixel);letter-spacing:.08em;color:var(--muted);text-transform:uppercase}
+
+.stats{display:grid;grid-template-columns:1fr;gap:10px;margin:0}
+.stat{display:flex;justify-content:space-between;align-items:baseline;gap:8px;border-bottom:1px dashed var(--line);padding-bottom:8px}
+.stat:last-child{border-bottom:0;padding-bottom:0}
+.stat dd{margin:0;font:600 18px var(--mono);font-variant-numeric:tabular-nums}
+.stat dd.lvl{font:700 20px var(--pixel);color:var(--p)}
+.pips{display:flex;gap:6px}
+.pip{width:18px;height:18px;display:block}
+.pip.lost{opacity:.22;filter:grayscale(1)}
+
+.keys{display:grid;grid-template-columns:auto 1fr;gap:7px 10px;align-items:center;font-size:12.5px;margin:10px 0 0}
+kbd{display:inline-block;min-width:24px;text-align:center;padding:2px 6px;font:600 11px var(--mono);background:var(--panel2);border:1px solid var(--line);border-bottom-width:3px;border-radius:3px;color:var(--text)}
+.toggles{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.tbtn{background:var(--panel2);border:1px solid var(--line);border-radius:3px;padding:5px 9px;font:400 11px var(--pixel);cursor:pointer;letter-spacing:.05em}
+.tbtn[aria-pressed="true"]{background:var(--p);color:var(--ink);border-color:var(--p)}
+
+/* ---------- playfield ---------- */
+.play{display:flex;flex-direction:column;gap:10px;min-width:0}
+.toast{min-height:44px;display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:4px;background:var(--panel);border:1px solid var(--line);font-size:13px;text-wrap:pretty}
+.toast::before{content:"";flex:none;width:8px;height:8px;border-radius:1px;background:var(--muted)}
+.toast.good::before{background:var(--f)} .toast.bad{border-color:var(--bad)} .toast.bad::before{background:var(--bad)}
+.toast.gold{border-color:var(--p)} .toast.gold::before{background:var(--p)}
+.toast b{font-weight:600}
+
+.field{--cell:80px;flex:1;display:grid;grid-template-columns:34px minmax(0,1fr);grid-template-rows:1fr auto;gap:6px}
+.rowlabels{display:flex;flex-direction:column;justify-content:flex-end;padding-bottom:8px}
+.rowlabels div{height:var(--cell);flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
+.rowlabels .L{font:700 22px var(--mono)}
+.rowlabels small{font-size:10px;color:var(--muted);margin-top:3px}
+.collabels{display:grid;grid-template-columns:repeat(7,1fr);padding-inline:6px}
+.collabels div{text-align:center;font:500 12px var(--mono);color:var(--muted)}
+.collabels b{color:var(--text);font-weight:700}
+
+.frame{display:flex;flex-direction:column;padding:6px;background:#080a13;border:2px solid var(--line);border-radius:6px;box-shadow:0 0 0 4px var(--panel),0 18px 40px rgba(0,0,0,.45)}
+.well{position:relative;flex:1;width:100%;min-height:calc(var(--cell) * 6)}
+.well.shake{animation:shake .32s}
+@keyframes shake{20%{transform:translateX(-6px)}40%{transform:translateX(5px)}60%{transform:translateX(-4px)}80%{transform:translateX(2px)}}
+.hopper{position:absolute;left:0;right:0;top:0;height:calc(100% - var(--cell) * 4);border-bottom:2px dashed var(--line);display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding:6px 8px;
+  background:repeating-linear-gradient(0deg,rgba(42,49,82,.18) 0 2px,transparent 2px 6px)}
+.hopper span{font:400 10px var(--pixel);color:var(--muted);letter-spacing:.08em}
+.hopper .skyrule{color:#5d6690}
+.lane{position:absolute;top:0;bottom:0;left:0;width:calc(100%/7);transform:translateX(calc(var(--c)*100%));background:linear-gradient(rgba(242,245,255,.09),rgba(242,245,255,.02));pointer-events:none}
+
+.slot{position:absolute;width:calc(100%/7);height:var(--cell);padding:3px}
+.tile{position:absolute;inset:3px;border-radius:3px;background:var(--panel);border:1px solid var(--line);container-type:size;overflow:hidden;transition:background-color .18s,box-shadow .18s}
+.tile.s{--blk:var(--s)} .tile.p{--blk:var(--p)} .tile.d{--blk:var(--d)} .tile.f{--blk:var(--f)}
+.tile .lab{position:absolute;top:6cqh;left:8cqw;font:700 clamp(9px,21cqw,24px)/1 var(--mono);color:var(--blk)}
+.tile .cnt{position:absolute;top:8cqh;right:8cqw;font:500 clamp(7px,11cqw,13px)/1 var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.tile .nl{position:absolute;top:40cqh;left:8cqw;font:500 clamp(7px,11cqw,12px)/1 var(--mono);color:var(--muted);display:none}
+.hint .tile .nl{display:block}
+.boxes{position:absolute;left:7cqw;right:7cqw;bottom:9cqh;height:25cqh;display:flex;gap:2cqw}
+.boxes i{flex:1;display:flex;border:1px solid color-mix(in srgb,var(--blk) 55%,var(--line));border-radius:1px;min-width:0}
+.boxes b{flex:1;display:grid;place-items:center;font:700 clamp(6px,min(20cqh,9cqw),16px)/1 var(--mono);min-width:0;overflow:hidden}
+.boxes b.on{background:color-mix(in srgb,var(--blk) 35%,transparent);color:var(--text)}
+.boxes b.u.on::before{content:"↑"} .boxes b.d.on::before{content:"↓"}
+
+.tile.partial{background:color-mix(in srgb,var(--blk) var(--pct),var(--panel));border-color:color-mix(in srgb,var(--blk) 60%,var(--line))}
+.tile.full{background:var(--blk);border-color:transparent;
+  box-shadow:inset 0 4px 0 rgba(255,255,255,.38),inset 0 -5px 0 rgba(0,0,0,.3),inset 4px 0 0 rgba(255,255,255,.16),inset -4px 0 0 rgba(0,0,0,.2)}
+.tile.full .lab,.tile.full .cnt,.tile.full .nl{color:var(--ink)}
+.tile.full .boxes i{border-color:rgba(11,13,24,.55)}
+.tile.full .boxes b.on{background:rgba(11,13,24,.14);color:var(--ink)}
+.tile.void{background:repeating-linear-gradient(45deg,#10131f 0 5px,#0b0d18 5px 10px);border-style:dashed}
+.tile.void .lab{color:#4a5275;text-decoration:line-through;text-decoration-thickness:2px}
+.tile.void .cnt{color:#4a5275}
+.tile.target{outline:2px solid var(--orb);outline-offset:-2px}
+.tile.pop{animation:pop .3s ease-out}
+@keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.1);filter:brightness(1.5)}100%{transform:scale(1)}}
+.tile.badflash{animation:badflash .9s}
+@keyframes badflash{0%,40%{background:var(--bad);border-color:var(--bad)}}
+.tile.answer{outline:3px dashed var(--orb);outline-offset:-3px;animation:blink .3s steps(2) 4}
+@keyframes blink{50%{outline-color:transparent}}
+
+.electron{position:absolute;left:0;bottom:calc(var(--b) * var(--cell));width:calc(100%/7);height:var(--cell);transform:translateX(calc(var(--c)*100%));pointer-events:none;display:grid;place-items:center;z-index:3}
+.electron .orb{width:58%;aspect-ratio:1;animation:bob .5s steps(1) infinite}
+.px{display:block;width:100%;height:100%;image-rendering:pixelated;shape-rendering:crispEdges}
+.electron .px{filter:drop-shadow(0 0 6px rgba(110,140,255,.65));animation:glint 1s steps(1) infinite}
+@keyframes bob{50%{transform:translateY(-8.33%)}}
+@keyframes glint{50%{filter:drop-shadow(0 0 11px rgba(140,165,255,.9))}}
+.electron[hidden]{display:none}
+
+.card{position:absolute;inset:0;z-index:5;display:grid;place-items:center;padding:12px;background:rgba(8,10,19,.8);backdrop-filter:blur(2px)}
+.card .inner{max-width:420px;width:100%;background:var(--panel);border:2px solid var(--line);border-radius:6px;padding:18px 20px;display:flex;flex-direction:column;gap:10px;max-height:100%;overflow:auto}
+.card h2{margin:0;font:700 clamp(16px,3vw,24px)/1.1 var(--pixel);color:var(--p);text-wrap:balance}
+.card p{margin:0;font-size:13px;text-wrap:pretty}
+.card ul{margin:0;padding-left:18px;font-size:12.5px;display:flex;flex-direction:column;gap:4px}
+.card .rule{font:600 12.5px var(--mono);background:var(--panel2);border:1px solid var(--line);border-radius:3px;padding:8px 10px}
+.go{align-self:flex-start;background:var(--p);color:var(--ink);border:0;border-radius:3px;padding:10px 16px;font:700 14px var(--pixel);letter-spacing:.05em;cursor:pointer;
+  box-shadow:inset 0 3px 0 rgba(255,255,255,.4),inset 0 -4px 0 rgba(0,0,0,.25)}
+.go:hover{filter:brightness(1.08)}
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.modeopt{text-align:left;display:flex;flex-direction:column;gap:4px;padding:10px 12px;background:var(--panel2);border:2px solid var(--line);border-radius:4px;cursor:pointer}
+.modeopt b{font:700 13px var(--pixel);color:var(--text)}
+.modeopt span{font-size:11.5px;color:var(--muted);line-height:1.35}
+.modeopt.sel{border-color:var(--d)} .modeopt.sel b{color:var(--d)}
+.modeopt:hover{border-color:var(--p)}
+.btnrow{display:flex;gap:8px;flex-wrap:wrap}
+.go.ghost{background:var(--panel2);color:var(--text);box-shadow:inset 0 0 0 1px var(--line)}
+@media (max-width:460px){.modes{grid-template-columns:1fr}}
+
+.pad{display:none;grid-template-columns:1fr 1fr 1.6fr 1fr;gap:8px}
+.pad button{background:var(--panel2);border:1px solid var(--line);border-bottom-width:4px;border-radius:5px;padding:14px 0;font:700 16px var(--pixel);cursor:pointer;touch-action:manipulation}
+.pad button.dropb{background:var(--p);color:var(--ink);border-color:#b98a1a}
+@media (pointer:coarse),(max-width:1020px){.pad{display:grid}}
+
+/* ---------- element panel ---------- */
+.eltile{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:center}
+.big{width:104px;height:116px;border-radius:4px;position:relative;background:var(--panel2);border:1px solid var(--line);color:var(--text)}
+.big.s,.big.p,.big.d,.big.f{background:var(--blk);color:var(--ink);border-color:transparent;
+  box-shadow:inset 0 5px 0 rgba(255,255,255,.38),inset 0 -6px 0 rgba(0,0,0,.3),inset 5px 0 0 rgba(255,255,255,.16),inset -5px 0 0 rgba(0,0,0,.2)}
+.big.s{--blk:var(--s)} .big.p{--blk:var(--p)} .big.d{--blk:var(--d)} .big.f{--blk:var(--f)}
+.big .z{position:absolute;top:8px;left:10px;font:600 13px var(--mono)}
+.big .sym{position:absolute;left:0;right:0;top:30px;text-align:center;font:700 42px/1 var(--mono);letter-spacing:-.03em}
+.big .nm{position:absolute;left:4px;right:4px;bottom:10px;text-align:center;font:600 10px var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.elmeta{display:flex;flex-direction:column;gap:6px;min-width:0}
+.incoming{font-size:12.5px;color:var(--muted)}
+.incoming b{color:var(--text)}
+.config{margin-top:12px;font:500 14px/1.9 var(--mono);word-spacing:2px;overflow-wrap:anywhere}
+.config sup{font-size:.68em;margin-left:1px}
+.config .core{color:var(--muted)}
+.b-s{color:var(--s)} .b-p{color:var(--p)} .b-d{color:var(--d)} .b-f{color:var(--f)}
+
+.mini{display:grid;grid-template-columns:repeat(18,1fr);grid-template-rows:repeat(7,auto) 5px repeat(2,auto);gap:2px;margin-top:10px}
+.mini div{aspect-ratio:1;border-radius:1px;background:var(--panel2);font:600 clamp(6px,.62vw,8px)/1 var(--mono);display:grid;place-items:center;color:#4f587e;overflow:hidden}
+.mini div.on.s{background:var(--s);color:var(--ink)} .mini div.on.p{background:var(--p);color:var(--ink)}
+.mini div.on.d{background:var(--d);color:var(--ink)} .mini div.on.f{background:var(--f);color:var(--ink)}
+.mini div.next{outline:2px solid var(--orb);outline-offset:0;color:var(--text)}
+.legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;font-size:11.5px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend i{width:10px;height:10px;border-radius:1px;display:inline-block}
+.note{font-size:11.5px;color:var(--muted);margin:10px 0 0;text-wrap:pretty}
+
+/* ---------- responsive ---------- */
+@media (max-width:1020px){
+  .stage{grid-template-columns:minmax(0,620px)}
+  .play{order:-1}
+  .hud.left .stats{grid-template-columns:repeat(3,1fr)}
+  .hud.left .stat{flex-direction:column;align-items:flex-start;border-bottom:0;padding-bottom:0}
+  .keysbox{display:none}
+}
+@media (max-width:460px){
+  .field{grid-template-columns:24px minmax(0,1fr)}
+  .rowlabels .L{font-size:15px} .rowlabels small{display:none}
+  .hopper .skyrule{display:none}
+  .collabels div{font-size:10px}
+  .electron .orb{font-size:9px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+</style>
+
+<div class="app">
+  <header class="top">
+    <div class="logo" aria-hidden="true"><span class="z">101</span><span class="sym">Md</span></div>
+    <div>
+      <h1><span class="a">Madelung's</span> <span class="b">Madness</span></h1>
+      <p class="tag">Steer each falling electron into the orbital it fills next. Lowest <b>n + l</b> goes first; on a tie, lowest <b>n</b> wins.</p>
+    </div>
+  </header>
+
+  <main class="stage">
+    <aside class="hud left">
+      <div class="box">
+        <div class="lbl">Mode</div>
+        <div class="seg" role="group" aria-label="Game mode">
+          <button data-mode="simple" aria-pressed="false">Simple</button>
+          <button data-mode="periodic" aria-pressed="true">Periodic</button>
+        </div>
+        <dl class="stats">
+          <div class="stat"><dt class="lbl">Level</dt><dd class="lvl" id="hLevel">1</dd></div>
+          <div class="stat"><dt class="lbl">Score</dt><dd id="hScore">0</dd></div>
+          <div class="stat"><dt class="lbl">Best</dt><dd id="hBest">0</dd></div>
+          <div class="stat"><dt class="lbl">Stability</dt><dd class="pips" id="hLives"></dd></div>
+          <div class="stat"><dt class="lbl">Streak</dt><dd id="hStreak">0</dd></div>
+          <div class="stat"><dt class="lbl">Fall rate</dt><dd id="hRate">0.90 s</dd></div>
+        </dl>
+      </div>
+      <div class="box keysbox">
+        <div class="lbl">Controls</div>
+        <div class="keys">
+          <span><kbd>←</kbd> <kbd>→</kbd></span><span>Steer electron</span>
+          <span><kbd>↓</kbd></span><span>Fall one row</span>
+          <span><kbd>Space</kbd></span><span>Drop into orbital</span>
+          <span><kbd>P</kbd></span><span>Pause</span>
+          <span><kbd>H</kbd></span><span>Show n + l</span>
+          <span><kbd>M</kbd></span><span>Sound</span>
+          <span><kbd>1</kbd> <kbd>2</kbd></span><span>Simple / Periodic</span>
+        </div>
+        <div class="toggles">
+          <button class="tbtn" id="hintBtn" aria-pressed="false">n+l hints</button>
+          <button class="tbtn" id="muteBtn" aria-pressed="false">Mute</button>
+        </div>
+      </div>
+    </aside>
+
+    <section class="play">
+      <div class="toast" id="toast" role="status" aria-live="polite">Electron #27 is waiting in the source.</div>
+      <div class="field">
+        <div class="rowlabels" aria-hidden="true">
+          <div><span class="L b-f">f</span><small>ℓ=3</small></div>
+          <div><span class="L b-d">d</span><small>ℓ=2</small></div>
+          <div><span class="L b-p">p</span><small>ℓ=1</small></div>
+          <div><span class="L b-s">s</span><small>ℓ=0</small></div>
+        </div>
+        <div class="frame">
+          <div class="well" id="well">
+            <div class="hopper"><span class="skyrule">lowest n+l first · tie → lowest n</span><span>e⁻ source</span></div>
+            <div class="lane" id="lane"></div>
+            <div class="electron" id="electron"><div class="orb" id="orb"></div></div>
+            <div class="card" id="card"></div>
+          </div>
+        </div>
+        <div></div>
+        <div class="collabels" id="collabels"></div>
+      </div>
+      <div class="pad" aria-label="Touch controls">
+        <button data-k="left" aria-label="Move left">◀</button>
+        <button data-k="down" aria-label="Fall one row">▼</button>
+        <button data-k="drop" class="dropb">DROP</button>
+        <button data-k="right" aria-label="Move right">▶</button>
+      </div>
+    </section>
+
+    <aside class="hud right">
+      <div class="box">
+        <div class="lbl">Current atom</div>
+        <div class="eltile" style="margin-top:10px">
+          <div class="big" id="big"><span class="z" id="bZ">26</span><span class="sym" id="bSym">Fe</span><span class="nm" id="bName">Iron</span></div>
+          <div class="elmeta">
+            <div class="incoming" id="incoming">Next: electron <b>#27</b></div>
+            <div class="incoming" id="progress">26 / 118 electrons</div>
+          </div>
+        </div>
+        <div class="config" id="config"></div>
+      </div>
+      <div class="box">
+        <div class="lbl">Elements built</div>
+        <div class="mini" id="mini"></div>
+        <div class="legend">
+          <span><i style="background:var(--s)"></i>s-block</span>
+          <span><i style="background:var(--p)"></i>p-block</span>
+          <span><i style="background:var(--d)"></i>d-block</span>
+          <span><i style="background:var(--f)"></i>f-block</span>
+        </div>
+        <p class="note">Simple mode lights every element up to the one that completes each subshell. Both modes follow the idealized Madelung order, so exceptions like Cr, Cu and La are filled “by the rule,” not as measured.</p>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<script>
+(() => {
+const L = ['s','p','d','f'];
+const CAP = [2,6,10,14];
+const NOBLE = new Set([2,10,18,36,54,86,118]);
+const ELEMENTS = ("H Hydrogen|He Helium|Li Lithium|Be Beryllium|B Boron|C Carbon|N Nitrogen|O Oxygen|F Fluorine|Ne Neon|" +
+"Na Sodium|Mg Magnesium|Al Aluminium|Si Silicon|P Phosphorus|S Sulfur|Cl Chlorine|Ar Argon|K Potassium|Ca Calcium|" +
+"Sc Scandium|Ti Titanium|V Vanadium|Cr Chromium|Mn Manganese|Fe Iron|Co Cobalt|Ni Nickel|Cu Copper|Zn Zinc|" +
+"Ga Gallium|Ge Germanium|As Arsenic|Se Selenium|Br Bromine|Kr Krypton|Rb Rubidium|Sr Strontium|Y Yttrium|Zr Zirconium|" +
+"Nb Niobium|Mo Molybdenum|Tc Technetium|Ru Ruthenium|Rh Rhodium|Pd Palladium|Ag Silver|Cd Cadmium|In Indium|Sn Tin|" +
+"Sb Antimony|Te Tellurium|I Iodine|Xe Xenon|Cs Cesium|Ba Barium|La Lanthanum|Ce Cerium|Pr Praseodymium|Nd Neodymium|" +
+"Pm Promethium|Sm Samarium|Eu Europium|Gd Gadolinium|Tb Terbium|Dy Dysprosium|Ho Holmium|Er Erbium|Tm Thulium|Yb Ytterbium|" +
+"Lu Lutetium|Hf Hafnium|Ta Tantalum|W Tungsten|Re Rhenium|Os Osmium|Ir Iridium|Pt Platinum|Au Gold|Hg Mercury|" +
+"Tl Thallium|Pb Lead|Bi Bismuth|Po Polonium|At Astatine|Rn Radon|Fr Francium|Ra Radium|Ac Actinium|Th Thorium|" +
+"Pa Protactinium|U Uranium|Np Neptunium|Pu Plutonium|Am Americium|Cm Curium|Bk Berkelium|Cf Californium|Es Einsteinium|Fm Fermium|" +
+"Md Mendelevium|No Nobelium|Lr Lawrencium|Rf Rutherfordium|Db Dubnium|Sg Seaborgium|Bh Bohrium|Hs Hassium|Mt Meitnerium|Ds Darmstadtium|" +
+"Rg Roentgenium|Cn Copernicium|Nh Nihonium|Fl Flerovium|Mc Moscovium|Lv Livermorium|Ts Tennessine|Og Oganesson")
+  .split('|').map(s => { const i = s.indexOf(' '); return [s.slice(0,i), s.slice(i+1)]; });
+
+// Madelung filling sequence up to 118 electrons
+const all = [];
+for (let n = 1; n <= 7; n++) for (let l = 0; l <= 3; l++) if (l < n) all.push({n,l});
+all.sort((a,b) => (a.n+a.l) - (b.n+b.l) || a.n - b.n);
+const SEQ = []; let tot = 0;
+for (const o of all) { if (tot >= 118) break; SEQ.push(o); tot += CAP[o.l]; }
+const ORB = [null];                       // ORB[Z] = orbital receiving electron Z
+for (const o of SEQ) for (let i = 0; i < CAP[o.l]; i++) ORB.push(o);
+const oname = o => o.n + L[o.l];
+let SKY = 2, ROWS = SKY + 4;              // rows 0..SKY-1 are open sky above the f row; grows to fill the board height
+const lOfRow = r => SKY + 3 - r;
+// subshell index (1-based) that electron Z belongs to
+const SUB = [0]; { let i = 0, e = 0; for (const o of SEQ){ i++; for (let k = 0; k < CAP[o.l]; k++) SUB[++e] = i; } }
+
+// 12x12 pixel-art electron
+const PX_MAP = ["....oooo....","..oolllloo..",".olwwllllbo.",".olwlllbbbo.","olllllbbbbdo","olbmmmmmmbdo",
+                "olbmmmmmmbdo","obbbbbbbbddo",".obbbbbbddo.",".odbbbbdddo.","..oodddddoo.","....oooo...."];
+const PX_COL = { o:"#1b2466", l:"#9fb3ff", w:"#ffffff", b:"#5a74ff", d:"#3346c9", m:"#f2f5ff" };
+function pixelElectron(cls = 'px'){
+  let r = '';
+  PX_MAP.forEach((row, y) => [...row].forEach((ch, x) => { if (ch !== '.') r += `<rect x="${x}" y="${y}" width="1" height="1" fill="${PX_COL[ch]}"/>`; }));
+  return `<svg class="${cls}" viewBox="0 0 12 12" aria-hidden="true">${r}</svg>`;
+}
+
+// ---------- state ----------
+const S = { mode:'title', game:'simple', level:1, score:0, best:0, lives:3, streak:0, z:26, fill:{}, col:2, row:SKY+1, hint:false, muted:false };
+const bestKey = () => 'mm-best-' + S.game;
+function loadBest(){ try { S.best = +localStorage.getItem(bestKey()) || (S.game === 'periodic' ? +localStorage.getItem('mm-best') || 0 : 0); } catch { S.best = 0; } }
+try { S.muted = localStorage.getItem('mm-muted') === '1'; const g = localStorage.getItem('mm-game'); if (g === 'simple' || g === 'periodic') S.game = g; } catch {}
+loadBest();
+const simple = () => S.game === 'simple';
+const tickMs = () => Math.max(110, Math.round(900 * Math.pow(0.8, S.level - 1)));
+function fillTo(z){ S.fill = {}; for (let i = 1; i <= z; i++){ const k = ORB[i].n + '' + ORB[i].l; S.fill[k] = (S.fill[k]||0) + 1; } S.z = z; }
+fillTo(26);
+
+// ---------- DOM ----------
+const $ = id => document.getElementById(id);
+const field = document.querySelector('.field'), well = $('well'), card = $('card'), toast = $('toast'), elec = $('electron'), lane = $('lane');
+const tiles = {};
+for (let n = 1; n <= 7; n++) for (let l = 0; l <= 3; l++){
+  const slot = document.createElement('div');
+  slot.className = 'slot';
+  slot.style.left = `calc(${n-1} * 100% / 7)`;
+  slot.style.bottom = `calc(${l} * var(--cell))`;
+  const t = document.createElement('div');
+  t.className = 'tile ' + L[l] + (l >= n ? ' void' : '');
+  const cap = CAP[l];
+  t.innerHTML = `<span class="lab">${n}${L[l]}</span><span class="cnt">${l >= n ? '—' : '0/' + cap}</span>` +
+    (l >= n ? '' : `<span class="nl">n+l ${n+l}</span><div class="boxes">${'<i><b class="u"></b><b class="d"></b></i>'.repeat(cap/2)}</div>`);
+  slot.appendChild(t);
+  well.insertBefore(slot, elec);
+  tiles[n + '' + l] = t;
+}
+$('collabels').innerHTML = [1,2,3,4,5,6,7].map(n => `<div>n=<b>${n}</b></div>`).join('');
+
+const mini = $('mini'), miniCells = [null];
+function tablePos(Z){
+  if (Z === 1) return [1,1]; if (Z === 2) return [1,18];
+  if (Z <= 4) return [2,Z-2]; if (Z <= 10) return [2,Z+8];
+  if (Z <= 12) return [3,Z-10]; if (Z <= 18) return [3,Z];
+  if (Z <= 36) return [4,Z-18]; if (Z <= 54) return [5,Z-36];
+  if (Z <= 56) return [6,Z-54]; if (Z <= 70) return [9,Z-54]; if (Z <= 86) return [6,Z-68];
+  if (Z <= 88) return [7,Z-86]; if (Z <= 102) return [10,Z-86]; return [7,Z-100];
+}
+for (let Z = 1; Z <= 118; Z++){
+  const d = document.createElement('div');
+  const [r,c] = tablePos(Z);
+  d.style.gridRow = r; d.style.gridColumn = c;
+  d.className = L[ORB[Z].l];
+  d.textContent = ELEMENTS[Z-1][0];
+  d.title = `${Z} ${ELEMENTS[Z-1][1]}`;
+  mini.appendChild(d); miniCells.push(d);
+}
+
+// ---------- sound ----------
+let actx = null;
+function tone(freq, dur = .08, type = 'square', vol = .045, slide = 0){
+  if (S.muted) return;
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    const t0 = actx.currentTime, o = actx.createOscillator(), g = actx.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, t0);
+    if (slide) o.frequency.exponentialRampToValueAtTime(freq * slide, t0 + dur);
+    g.gain.setValueAtTime(vol, t0); g.gain.exponentialRampToValueAtTime(.0001, t0 + dur);
+    o.connect(g).connect(actx.destination); o.start(t0); o.stop(t0 + dur + .02);
+  } catch {}
+}
+const arpeggio = (notes, gap = 70) => notes.forEach((f,i) => setTimeout(() => tone(f, .12, 'square', .04), i * gap));
+
+// ---------- rendering ----------
+function renderBoard(){
+  for (let n = 1; n <= 7; n++) for (let l = 0; l < n && l <= 3; l++){
+    const key = n + '' + l, t = tiles[key], c = S.fill[key] || 0, cap = CAP[l], m = cap / 2;
+    t.classList.toggle('full', c === cap);
+    t.classList.toggle('partial', c > 0 && c < cap);
+    t.style.setProperty('--pct', Math.round(18 + 30 * c / cap) + '%');
+    t.querySelector('.cnt').textContent = c + '/' + cap;
+    t.querySelectorAll('.boxes i').forEach((box, i) => {
+      box.children[0].classList.toggle('on', Math.min(c, m) > i);
+      box.children[1].classList.toggle('on', c - m > i);
+    });
+  }
+  renderElectron();
+}
+function renderElectron(){
+  const show = S.mode !== 'over';
+  elec.hidden = !show;
+  elec.style.setProperty('--c', S.col); elec.style.setProperty('--b', ROWS - 1 - S.row);
+  lane.style.setProperty('--c', S.col);
+  lane.style.visibility = show ? 'visible' : 'hidden';
+  for (const k in tiles) tiles[k].classList.remove('target');
+  if (show && S.row >= SKY) tiles[(S.col+1) + '' + lOfRow(S.row)].classList.add('target');
+}
+function configHTML(z){
+  if (z === 0) return '<span class="core">No electrons yet.</span>';
+  const cores = [[86,'Rn'],[54,'Xe'],[36,'Kr'],[18,'Ar'],[10,'Ne'],[2,'He']];
+  let start = 0, out = '';
+  for (const [cz, cs] of cores) if (cz < z){ start = cz; out = `<span class="core">[${cs}]</span> `; break; }
+  const parts = []; let e = 0;
+  for (const o of SEQ){
+    const lo = e, hi = e + CAP[o.l]; e = hi;
+    if (hi <= start) continue; if (lo >= z) break;
+    parts.push(`<span class="b-${L[o.l]}">${oname(o)}<sup>${Math.min(z,hi) - lo}</sup></span>`);
+  }
+  return out + parts.join(' ');
+}
+function renderHUD(){
+  $('hLevel').textContent = S.level;
+  $('hScore').textContent = S.score.toLocaleString();
+  $('hBest').textContent = S.best.toLocaleString();
+  $('hStreak').textContent = S.streak;
+  $('hRate').textContent = (tickMs()/1000).toFixed(2) + ' s';
+  $('hLives').innerHTML = [0,1,2].map(i => `<span class="pip${i < S.lives ? '' : ' lost'}">${pixelElectron()}</span>`).join('');
+  document.querySelectorAll('.seg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === S.game));
+  $('hLives').setAttribute('aria-label', S.lives + ' of 3');
+  const big = $('big');
+  big.className = 'big' + (S.z ? ' ' + L[ORB[S.z].l] : '');
+  $('bZ').textContent = S.z;
+  $('bSym').textContent = S.z ? ELEMENTS[S.z-1][0] : '—';
+  $('bName').textContent = S.z ? ELEMENTS[S.z-1][1] : 'Bare nucleus';
+  $('incoming').innerHTML = S.z >= 118 ? '<b>All orbitals filled</b>'
+    : simple() ? `Next: subshell <b>${SUB[S.z+1]}</b> of ${SEQ.length}` : `Next: electron <b>#${S.z+1}</b>`;
+  $('progress').textContent = simple() ? `${S.z === 0 ? 0 : (SUB[S.z+1] === SUB[S.z] ? SUB[S.z] - 1 : SUB[S.z])} / ${SEQ.length} subshells · ${S.z} e⁻` : `${S.z} / 118 electrons`;
+  $('config').innerHTML = configHTML(S.z);
+  for (let Z = 1; Z <= 118; Z++){
+    miniCells[Z].classList.toggle('on', Z <= S.z);
+    miniCells[Z].classList.toggle('next', Z === S.z + 1 && S.mode === 'play');
+  }
+}
+function render(){ renderBoard(); renderHUD(); }
+function say(html, kind = ''){ toast.className = 'toast' + (kind ? ' ' + kind : ''); toast.innerHTML = html; }
+function flash(key, cls, ms){ const t = tiles[key]; if (!t) return; t.classList.remove(cls); void t.offsetWidth; t.classList.add(cls); setTimeout(() => t.classList.remove(cls), ms); }
+
+function showCard(html){ card.innerHTML = `<div class="inner">${html}</div>`; card.hidden = false; const b = card.querySelector('.go'); if (b) b.focus({preventScroll:true}); }
+function hideCard(){ card.hidden = true; card.innerHTML = ''; }
+
+// ---------- game flow ----------
+let acc = 0;
+function spawn(){ S.col = 3; S.row = 0; acc = 0; }
+function setGame(g){
+  if (g !== 'simple' && g !== 'periodic') return;
+  S.game = g; loadBest();
+  try { localStorage.setItem('mm-game', g); } catch {}
+  renderHUD();
+}
+function start(g){
+  if (typeof g === 'string') setGame(g);
+  Object.assign(S, { level:1, score:0, lives:3, streak:0 });
+  fillTo(0); spawn(); S.mode = 'play'; hideCard();
+  say(simple()
+    ? '<b>Simple mode.</b> Each drop fills a whole subshell. Steer with ← →, then drop with Space.'
+    : '<b>Periodic mode.</b> Electron <b>#1</b> incoming. Steer with ← →, then drop with Space.');
+  arpeggio([262,330,392,523]); render();
+}
+function nextLevel(){
+  S.level++; S.lives = Math.min(3, S.lives + 1); fillTo(0); spawn(); S.mode = 'play'; hideCard();
+  say(`Level <b>${S.level}</b>. Electrons now fall every ${(tickMs()/1000).toFixed(2)} s.`, 'gold');
+  render();
+}
+function pause(){
+  if (S.mode === 'play'){ S.mode = 'paused'; showCard(`<h2>Paused</h2><p>${simple() ? 'Subshell ' + SUB[S.z+1] : 'Electron #' + (S.z+1)} is holding position.</p><button class="go" data-act="resume">Resume</button>`); renderHUD(); }
+  else if (S.mode === 'paused'){ S.mode = 'play'; acc = 0; hideCard(); renderHUD(); }
+}
+function saveBest(){ if (S.score > S.best){ S.best = S.score; try { localStorage.setItem(bestKey(), S.best); } catch {} } }
+
+// switching modes mid-game asks first
+let confirmReturn = null;
+function requestGame(g){
+  if (g === S.game && S.mode !== 'over') return;
+  if (S.mode === 'title'){ setGame(g); titleCard(); return; }
+  if (S.mode === 'over'){ start(g); return; }
+  const prev = S.mode, prevCard = card.hidden ? '' : card.innerHTML;
+  confirmReturn = () => { S.mode = prev; acc = 0; if (prevCard){ card.innerHTML = prevCard; card.hidden = false; } else hideCard(); renderHUD(); };
+  S.mode = 'confirm';
+  const label = g === 'simple' ? 'Simple' : 'Periodic';
+  showCard(`<h2>Switch to ${label} mode?</h2><p>This starts a new game at level 1. Your current score of ${S.score.toLocaleString()} won't carry over.</p>
+    <div class="btnrow"><button class="go" data-act="${g}">Start ${label}</button><button class="go ghost" data-act="keep">Keep playing</button></div>`);
+}
+function keep(){ if (confirmReturn){ const f = confirmReturn; confirmReturn = null; f(); } }
+
+function move(d){
+  if (S.mode !== 'play') return;
+  const c = Math.min(6, Math.max(0, S.col + d));
+  if (c !== S.col){ S.col = c; tone(196, .03, 'square', .018); renderElectron(); }
+}
+function fall(){
+  if (S.mode !== 'play') return;
+  if (S.row < ROWS - 1){ S.row++; acc = 0; tone(140, .03, 'triangle', .02); renderElectron(); }
+  else place();
+}
+function drop(){
+  if (S.mode !== 'play') return;
+  if (S.row < SKY){ say('The electron is still above the orbitals. Wait for it to reach the f row, or press ↓.'); return; }
+  place();
+}
+function tick(){ if (S.row < ROWS - 1){ S.row++; renderElectron(); } else place(); }
+
+function place(){
+  const n = S.col + 1, l = lOfRow(S.row), key = n + '' + l, name = n + L[l];
+  const t = ORB[S.z + 1], tname = oname(t);
+  if (l >= n) return wrong(`<b>${name}</b> doesn't exist. A ${L[l]} orbital needs n ≥ ${l+1}. The next one goes in <b>${tname}</b>.`, key, t);
+  if (n === t.n && l === t.l) return correct(key, t);
+  const c = S.fill[key] || 0, k = n + l, tk = t.n + t.l;
+  if (c >= CAP[l]) return wrong(`<b>${name}</b> is already full (${c}/${CAP[l]}). The next one goes in <b>${tname}</b>.`, key, t);
+  if (k > tk) return wrong(`<b>${name}</b> has n+l = ${k}. <b>${tname}</b> has n+l = ${tk}, so ${tname} fills first.`, key, t);
+  return wrong(`<b>${name}</b> and <b>${tname}</b> tie at n+l = ${k}. The lower n wins, so ${tname} fills first.`, key, t);
+}
+function correct(key, o){
+  const add = simple() ? CAP[o.l] : 1;
+  S.fill[key] = (S.fill[key] || 0) + add; S.z += add; S.streak++;
+  const [sym, nm] = ELEMENTS[S.z - 1];
+  let pts = 10 * S.level + Math.min(S.streak, 20) * S.level, kind = 'good';
+  const full = S.fill[key] === CAP[o.l];
+  let msg = simple()
+    ? `<b>${oname(o)}</b> filled with ${CAP[o.l]} e⁻, which completes <b>${sym}</b> ${nm}.`
+    : `<b>${sym}</b> ${nm} built. Electron #${S.z} went into ${oname(o)}.`;
+  if (full){ pts += 50 * S.level; if (!simple()) msg = `<b>${oname(o)}</b> is full. ${msg}`; }
+  if (NOBLE.has(S.z)){ pts += 100 * S.level; kind = 'gold'; msg = `<b>${sym}</b> ${nm}: noble gas, shell closed!${simple() ? ` (${oname(o)} complete)` : ''}`; arpeggio([523,659,784,1047], 60); }
+  else tone(330 * Math.pow(2, (o.n + o.l) / 12 * 1.5), .09, 'square', .04, 1.5);
+  S.score += pts; saveBest();
+  say(`${msg} <span style="color:var(--p)">+${pts}</span>`, kind);
+  flash(key, 'pop', 320);
+  if (S.z === 118){
+    const bonus = 1000 * S.level; S.score += bonus; saveBest();
+    S.mode = 'levelclear'; render();
+    arpeggio([392,523,659,784,1047,1319], 90);
+    showCard(`<h2>Level ${S.level} clear</h2><p>${simple() ? 'All 19 subshells filled' : 'All 118 electrons placed'}. You built Oganesson, [Rn] 7s² 5f¹⁴ 6d¹⁰ 7p⁶, one orbital at a time.</p>
+      <p class="rule">Level bonus +${bonus.toLocaleString()} · Score ${S.score.toLocaleString()}</p>
+      <p>Next level: electrons fall every ${(Math.max(110, Math.round(900 * Math.pow(0.8, S.level)))/1000).toFixed(2)} s, and you get back 1 stability.</p>
+      <button class="go" data-act="next">Next level</button>`);
+    return;
+  }
+  spawn(); render();
+}
+function wrong(msg, key, t){
+  S.lives--; S.streak = 0;
+  flash(key, 'badflash', 900); flash(t.n + '' + t.l, 'answer', 1300);
+  well.classList.remove('shake'); void well.offsetWidth; well.classList.add('shake');
+  tone(110, .25, 'sawtooth', .06, .5);
+  say(msg, 'bad');
+  if (S.lives <= 0){
+    S.mode = 'over'; saveBest(); render();
+    const reached = S.z ? `${ELEMENTS[S.z-1][1]} (Z = ${S.z})` : 'a bare nucleus';
+    setTimeout(() => showCard(`<h2>Atom destabilized</h2><p>${msg}</p>
+      <p class="rule">Level ${S.level} · Reached ${reached} · Score ${S.score.toLocaleString()} · Best ${S.best.toLocaleString()}</p>
+      <p>Play again in:</p>${modeButtons()}`), 500);
+    return;
+  }
+  spawn(); render();
+}
+
+// ---------- input ----------
+document.addEventListener('keydown', e => {
+  const k = e.key;
+  if (['ArrowLeft','ArrowRight','ArrowDown','ArrowUp',' '].includes(k)) e.preventDefault();
+  if (e.repeat && (k === ' ' || k === 'Enter')) return;
+  const primary = k === ' ' || k === 'Enter';
+  if (k === '1' || k === '2'){ const g = k === '1' ? 'simple' : 'periodic'; return (S.mode === 'confirm') ? undefined : requestGame(g); }
+  if (S.mode === 'confirm'){ if (k === 'Escape') keep(); else if (primary){ const b = card.querySelector('.go'); if (b) b.click(); } return; }
+  if (S.mode === 'title' && primary) return start();
+  if (S.mode === 'over' && primary) return start();
+  if (S.mode === 'levelclear' && primary) return nextLevel();
+  if (S.mode === 'paused' && (primary || k === 'p' || k === 'P' || k === 'Escape')) return pause();
+  switch (k){
+    case 'ArrowLeft': case 'a': case 'A': move(-1); break;
+    case 'ArrowRight': case 'd': case 'D': move(1); break;
+    case 'ArrowDown': case 's': case 'S': fall(); break;
+    case ' ': case 'Enter': drop(); break;
+    case 'p': case 'P': case 'Escape': pause(); break;
+    case 'h': case 'H': toggleHint(); break;
+    case 'm': case 'M': toggleMute(); break;
+  }
+});
+card.addEventListener('click', e => {
+  const b = e.target.closest('[data-act]'); if (!b) return;
+  b.blur();
+  const act = b.dataset.act;
+  if (act === 'simple' || act === 'periodic'){ confirmReturn = null; return start(act); }
+  ({ start: () => start(), next: nextLevel, resume: pause, keep })[act]();
+});
+document.querySelectorAll('.pad button').forEach(b => b.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  const k = b.dataset.k;
+  if (S.mode === 'title' || S.mode === 'over'){ if (k === 'drop') start(); return; }
+  if (S.mode === 'levelclear'){ if (k === 'drop') nextLevel(); return; }
+  ({ left: () => move(-1), right: () => move(1), down: fall, drop })[k]();
+}));
+function toggleHint(){ S.hint = !S.hint; document.body.classList.toggle('hint', S.hint); $('hintBtn').setAttribute('aria-pressed', S.hint); }
+function toggleMute(){ S.muted = !S.muted; $('muteBtn').setAttribute('aria-pressed', S.muted); try { localStorage.setItem('mm-muted', S.muted ? '1' : '0'); } catch {} }
+document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', e => { e.currentTarget.blur(); requestGame(b.dataset.mode); }));
+$('hintBtn').addEventListener('click', e => { toggleHint(); e.currentTarget.blur(); });
+$('muteBtn').addEventListener('click', e => { toggleMute(); e.currentTarget.blur(); });
+$('muteBtn').setAttribute('aria-pressed', S.muted);
+window.addEventListener('blur', () => { if (S.mode === 'play') pause(); });
+
+// ---------- loop ----------
+let last = null;
+function frame(t){
+  if (last === null) last = t;
+  const dt = Math.min(250, t - last); last = t;
+  if (S.mode === 'play'){ acc += dt; const ms = tickMs(); while (acc >= ms && S.mode === 'play'){ acc -= ms; tick(); } }
+  requestAnimationFrame(frame);
+}
+
+function modeButtons(){
+  const opt = (g, key, title, desc) => `<button class="modeopt${S.game === g ? ' sel' : ''}" data-act="${g}"><b>${title}</b><span>${desc}</span><span><kbd>${key}</kbd></span></button>`;
+  return `<div class="modes">${opt('simple', '1', 'Simple mode', 'One drop fills a whole subshell. 19 drops per level, for drilling the filling order.')}${opt('periodic', '2', 'Periodic mode', 'One drop is one electron. 118 drops per level, building every element.')}</div>`;
+}
+// square orbital cells; however much height is left over becomes sky
+function fitBoard(){
+  const w = well.clientWidth, h = well.clientHeight;
+  if (!w) return;
+  const cell = w / 7;
+  field.style.setProperty('--cell', cell + 'px');
+  const sky = Math.max(2, Math.floor(h / cell + 0.001) - 4);
+  if (sky !== SKY){
+    if (S.row >= SKY) S.row += sky - SKY; else S.row = Math.min(S.row, sky - 1);
+    SKY = sky; ROWS = sky + 4;
+  }
+  renderElectron();
+}
+function titleCard(){
+  showCard(`<h2>Build the periodic table from 1s to 7p</h2>
+    <p>Each electron drops in from above the grid. Steer it into the orbital that fills next, from hydrogen all the way to oganesson.</p>
+    <p class="rule">Madelung's rule: lowest n + l fills first. On a tie, lowest n fills first.</p>
+    ${modeButtons()}
+    <ul>
+      <li><kbd>←</kbd> <kbd>→</kbd> steer · <kbd>↓</kbd> fall one row · <kbd>Space</kbd> drop into the orbital below</li>
+      <li>If the electron reaches the s row, it lands there on its own.</li>
+      <li>The wrong orbital costs 1 stability. Lose all 3 and the atom falls apart.</li>
+      <li>Complete oganesson to level up. Each level falls faster.</li>
+      <li>Grayed-out tiles like 1p and 3f aren't real orbitals.</li>
+    </ul>
+    <p style="color:var(--muted);font-size:12px">Press <kbd>Space</kbd> to start in ${simple() ? 'Simple' : 'Periodic'} mode.</p>`);
+}
+
+function boot(data){
+  if (data && data.S && data.S.fill){
+    Object.assign(S, data.S);
+    if (S.mode === 'play' || S.mode === 'confirm') S.mode = 'paused';
+    if (S.row >= ROWS) S.row = ROWS - 1;
+  }
+  $('orb').innerHTML = pixelElectron();
+  fitBoard();
+  if ('ResizeObserver' in window) new ResizeObserver(fitBoard).observe(well); else window.addEventListener('resize', fitBoard);
+  render();
+  document.body.classList.toggle('hint', S.hint); $('hintBtn').setAttribute('aria-pressed', S.hint);
+  if (S.mode === 'title') titleCard();
+  else if (S.mode === 'paused'){ S.mode = 'play'; pause(); }
+  else if (S.mode === 'over' || S.mode === 'levelclear'){ start(); }
+  requestAnimationFrame(frame);
+}
+try { window.claude?.hot?.snapshot?.(() => ({ S: { ...S } })); } catch {}
+window.claude?.hot?.ready ? window.claude.hot.ready(boot) : boot(window.claude?.hot?.data ?? {});
+})();
+</script>
