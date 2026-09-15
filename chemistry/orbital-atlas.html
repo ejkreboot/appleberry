@@ -556,13 +556,20 @@ const RMAX = n => 3.2 * n * n + 8;
 // Clouds sample a sharpened density (probability raised to this power) so the lobes read more compactly.
 // 1 = physically faithful; the radial graph always shows the true curve.
 const CLOUD_SHARPEN = 10;
+// The RADIAL part is sharpened much more gently, on the amplitude |R| with this exponent (as the
+// slice view does). Sharpening the radial probability r^2 R^2 by CLOUD_SHARPEN would wipe out the
+// smaller inner lobes of orbitals with radial nodes (3s, 3p, 4d...) and hide the radial nodes.
+const CLOUD_EXP = Math.sqrt(CLOUD_SHARPEN);
+// Angular sharpening, on |f(direction)|. High enough to keep lobes compact, low enough to keep
+// low-amplitude features (the d_z2 ring) populated.
+const ANG_EXP = 5;
 
 const radCache = {};
 function radialTable(n, l) {
   const key = n + '' + l; if (radCache[key]) return radCache[key];
   const N = 1500, rmax = RMAX(n), rs = new Float32Array(N), P = new Float32Array(N), cdf = new Float32Array(N), cdfC = new Float32Array(N);
   let sum = 0, peak = 0, sumC = 0;
-  for (let i = 0; i < N; i++) { const r = rmax * i / (N - 1); const R = radial(n, l, r); rs[i] = r; P[i] = r * r * R * R; sum += P[i]; cdf[i] = sum; sumC += Math.pow(P[i], CLOUD_SHARPEN); cdfC[i] = sumC; }
+  for (let i = 0; i < N; i++) { const r = rmax * i / (N - 1); const R = radial(n, l, r); rs[i] = r; P[i] = r * r * R * R; sum += P[i]; cdf[i] = sum; sumC += r * r * Math.pow(Math.abs(R), CLOUD_EXP); cdfC[i] = sumC; }
   for (let i = 0; i < N; i++) { cdf[i] /= sum; cdfC[i] /= sumC; P[i] = P[i] / sum * (N / rmax); if (P[i] > peak) peak = P[i]; }
   let r99 = rmax; for (let i = 0; i < N; i++) if (cdf[i] >= 0.99) { r99 = rs[i]; break; }
   let r99c = rmax; for (let i = 0; i < N; i++) if (cdfC[i] >= 0.99) { r99c = rs[i]; break; }
@@ -578,14 +585,14 @@ function randDir() { let x, y, z, d; do { x = Math.random() * 2 - 1; y = Math.ra
 function sampleOrbital(o, count = 26000) {
   if (sampleCache[o.id]) return sampleCache[o.id];
   const T = radialTable(o.n, o.l);
-  let amax = 0; for (let i = 0; i < 4000; i++) { const [x, y, z] = randDir(); const v = Math.abs(o.f(x, y, z)) ** (2 * CLOUD_SHARPEN); if (v > amax) amax = v; }
+  let amax = 0; for (let i = 0; i < 4000; i++) { const [x, y, z] = randDir(); const v = Math.abs(o.f(x, y, z)) ** ANG_EXP; if (v > amax) amax = v; }
   amax *= 1.05;
   const pos = new Float32Array(count * 3), sign = new Int8Array(count);
   for (let i = 0; i < count; i++) {
     const u = Math.random(); let lo = 0, hi = T.cdfC.length - 1;
     while (lo < hi) { const mid = (lo + hi) >> 1; if (T.cdfC[mid] < u) lo = mid + 1; else hi = mid; }
     const r = T.rs[lo] + (Math.random() - 0.5) * (T.rmax / T.cdf.length);
-    let d; do { d = randDir(); } while (Math.random() * amax > Math.abs(o.f(...d)) ** (2 * CLOUD_SHARPEN));
+    let d; do { d = randDir(); } while (Math.random() * amax > Math.abs(o.f(...d)) ** ANG_EXP);
     pos[i * 3] = d[0] * r; pos[i * 3 + 1] = d[1] * r; pos[i * 3 + 2] = d[2] * r;
     sign[i] = (radial(o.n, o.l, r) * o.f(...d)) >= 0 ? 1 : -1;
   }
@@ -594,7 +601,7 @@ function sampleOrbital(o, count = 26000) {
 // dense 2D cross-section in the orbital's best plane
 function sampleSlice(o, count = 16000) {
   const key = o.id + '|slice'; if (sampleCache[key]) return sampleCache[key];
-  const T = radialTable(o.n, o.l), R = T.r99c * 1.1, SK = Math.sqrt(CLOUD_SHARPEN);
+  const T = radialTable(o.n, o.l), R = T.r99c * 1.1, SK = CLOUD_EXP;
   const c = Math.SQRT1_2;
   const map = o.plane === 'xy' ? (a, b) => [a, b, 0] : o.plane === 'yz' ? (a, b) => [0, a, b] : o.plane === 'diag' ? (a, b) => [a * c, a * c, b] : (a, b) => [a, 0, b];
   const dens = (a, b) => { const [x, y, z] = map(a, b); const r = Math.hypot(x, y, z) || 1e-6; return radial(o.n, o.l, r) * o.f(x / r, y / r, z / r); };
@@ -690,7 +697,7 @@ class Viewer {
 const TABS = ['addresses', 'shapes', 'counting', 'energy', 'filling', 'practice'];
 const tabInit = {};
 function openTab(t) {
-  if (!TABS.includes(t)) t = 'shapes';
+  if (!TABS.includes(t)) t = 'addresses';
   $$('nav.tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === t));
   $$('section.mod').forEach(s => s.classList.toggle('on', s.id === 'mod-' + t));
   if (tabInit[t]) { tabInit[t](); tabInit[t] = null; }
@@ -703,7 +710,7 @@ const segBind = (el, cb) => el.addEventListener('click', e => { const b = e.targ
 
 /* ================= ADDRESSES ================= */
 tabInit.addresses = () => {
-  const st = { n: 3, l: 2, m: -1, s: 0.5 };
+  const st = { n: 1, l: 0, m: 0, s: 0.5 };
   const viewer = new Viewer($('#ad-stage'));
   const flash = $('#ad-flash');
   const say = msg => { flash.innerHTML = msg; flash.hidden = false; };
@@ -1214,5 +1221,5 @@ tabInit.practice = () => {
   next();
 };
 
-openTab(location.hash.slice(1) || 'shapes');
+openTab(location.hash.slice(1) || 'addresses');
 </script>
