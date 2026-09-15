@@ -10,6 +10,7 @@
   --accent:#1F4FA8; --accent-ink:#FFFFFF; --accent-soft:#DCE6F6;
   --s:#C4503F; --p:#2F74B5; --d:#B7860C; --f:#7B55B8;
   --pos:#2F6BD8; --neg:#E0822B;
+  --o1:#2F6BD8; --o2:#E0822B; --o3:#2E9D5B; --o4:#C8428F; --o5:#7B55B8; --o6:#0F9AA8;
   --good:#2E7D4F; --good-soft:#DDEFE4; --bad:#B53A2E; --bad-soft:#F6E0DC;
   --ghost:#9AA4B1;
   --display:"Bricolage Grotesque", "Avenir Next", "Segoe UI", sans-serif;
@@ -23,6 +24,7 @@
     --accent:#7FA8EE; --accent-ink:#0E1522; --accent-soft:#1E2C44;
     --s:#D9685A; --p:#4F8FD0; --d:#B8912A; --f:#9676D0;
     --pos:#5B92F0; --neg:#F0A04B;
+    --o1:#5B92F0; --o2:#F0A04B; --o3:#5CC486; --o4:#E674B4; --o5:#A58BE0; --o6:#3FC4CF;
     --good:#6CC08E; --good-soft:#18301F; --bad:#EE8577; --bad-soft:#3A1C19; --ghost:#5D6877;
   }
 }
@@ -32,6 +34,7 @@
   --accent:#7FA8EE; --accent-ink:#0E1522; --accent-soft:#1E2C44;
   --s:#D9685A; --p:#4F8FD0; --d:#B8912A; --f:#9676D0;
   --pos:#5B92F0; --neg:#F0A04B;
+  --o1:#5B92F0; --o2:#F0A04B; --o3:#5CC486; --o4:#E674B4; --o5:#A58BE0; --o6:#3FC4CF;
   --good:#6CC08E; --good-soft:#18301F; --bad:#EE8577; --bad-soft:#3A1C19; --ghost:#5D6877;
 }
 *{box-sizing:border-box}
@@ -75,6 +78,7 @@ section.mod.on{display:block}
 
 .btn{border:1px solid var(--rule);background:var(--raised);border-radius:7px;padding:6px 12px;cursor:pointer;font-weight:700;font-size:.9rem}
 .btn:hover{border-color:var(--ink-2)}
+.btn:disabled{opacity:.45;cursor:default}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .btn[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--ground)}
 .seg{display:inline-flex;border:1px solid var(--rule);border-radius:8px;overflow:hidden;background:var(--raised)}
@@ -99,6 +103,23 @@ section.mod.on{display:block}
 .pair{display:grid;grid-template-columns:1fr;gap:12px}
 .pair.two{grid-template-columns:1fr 1fr}
 @media (max-width:620px){.pair.two{grid-template-columns:1fr}}
+/* light-on-dark plot, scoped to a single stage; the viewer reads these tokens from the stage element */
+.stage.night{--raised:#161D29; --surface:#06090E; --ink:#F1F5FA; --ink-2:#C2CCD8; --muted:#8795A8; --rule:#263041;
+  --pos:#2BE4F2; --neg:#FFBE3B; --o1:#2BE4F2; --o2:#FFBE3B; --o3:#8CF56B; --o4:#FF6FB5; --o5:#B99BFF; --o6:#FF8A5C;
+  color:var(--ink); background:radial-gradient(circle at 50% 45%,#2A3547,#161D29 45%,#06090E 85%)}
+.stage .cap .big.multi{font-size:1.25rem;max-width:calc(100% - 24px)}
+/* stereo pair: always side by side; width is set by the image-size slider */
+.pair.stereo{grid-template-columns:1fr 1fr;gap:10px;max-width:var(--stereo-w,100%);width:100%;margin:0 auto}
+.bench.stereo{grid-template-columns:minmax(0,1fr)}
+/* full screen: the plot pair covers the window (and the screen, where the Fullscreen API exists) */
+#sh-pair{position:relative}
+.expand-btn{position:absolute;top:10px;right:10px;z-index:2;padding:4px 10px;font-size:.8rem;background:color-mix(in srgb,var(--raised) 80%,transparent)}
+#sh-pair.expanded{position:fixed;inset:0;z-index:100;margin:0;width:auto;max-width:none;padding:12px;overflow:auto;background:var(--ground);align-content:center}
+#sh-pair.expanded:has(> .stage.night){background:#06090E}
+#sh-pair.expanded.stereo{grid-template-columns:repeat(2,minmax(0,calc(var(--stereo-w,100%) / 2 - 5px)));justify-content:center}
+#sh-pair.expanded .stage{aspect-ratio:auto;height:calc(100vh - 24px);height:calc(100dvh - 24px)}
+#sh-pair.expanded .expand-btn{top:22px;right:22px}
+body.no-scroll{overflow:hidden}
 
 /* orbital picker */
 .picker{display:flex;flex-direction:column;gap:10px}
@@ -295,23 +316,26 @@ input[type=range]{width:100%;accent-color:var(--accent)}
   <div class="mod-head">
     <div class="eyebrow">Orbital gallery · all 30 orbitals</div>
     <h2>Where an electron is likely to be found</h2>
-    <p>Each dot is one possible position of the electron, so dense regions are where it spends the most time. Colors show the two phases of the wave. A node is a surface where the electron is never found. Cut the orbital open to see the nodes inside.</p>
+    <p>Each dot is one possible position of the electron, so dense regions are where it spends the most time. Colors show the two phases of the wave. A node is a surface where the electron is never found. Take a thin slice to see the nodes inside.</p>
   </div>
   <div class="bench">
     <div class="stack">
       <div class="pair" id="sh-pair">
+        <button class="btn expand-btn" id="sh-expand" aria-pressed="false" title="Full screen (Esc to exit)">⤢ Full screen</button>
         <div class="stage" id="sh-stage"><div class="cap"><div class="big" id="sh-cap"></div><div class="sm" id="sh-capsm"></div></div>
           <div class="legend"><span><i class="dot" style="background:var(--pos)"></i> +</span><span><i class="dot" style="background:var(--neg)"></i> −</span></div></div>
-        <div class="stage" id="sh-stage2" hidden><div class="cap"><div class="big" id="sh-cap2"></div><div class="sm">pinned</div></div></div>
+        <div class="stage" id="sh-stage2" hidden><div class="cap"><div class="big" id="sh-cap2"></div><div class="sm">pinned</div></div><div class="legend"></div></div>
+        <div class="stage" id="sh-stage3" hidden><div class="cap"><div class="big" id="sh-cap3"></div><div class="sm" id="sh-capsm3"></div></div>
+          <div class="legend"><span><i class="dot" style="background:var(--pos)"></i> +</span><span><i class="dot" style="background:var(--neg)"></i> −</span></div></div>
       </div>
       <div class="row" style="justify-content:space-between">
         <div class="row">
           <span class="label">View</span>
-          <div class="seg" id="sh-mode"><button data-v="whole" aria-pressed="true">Whole</button><button data-v="half">Cut in half</button><button data-v="slice">Thin slice</button></div>
+          <div class="seg" id="sh-mode"><button data-v="whole" aria-pressed="true">Whole</button><button data-v="slice">Thin slice</button></div>
         </div>
         <div class="row">
           <span class="label">Size</span>
-          <div class="seg" id="sh-scale"><button data-v="fit" aria-pressed="true">Fit to view</button><button data-v="true">Relative Size</button></div>
+          <div class="seg" id="sh-scale"><button data-v="fit">Fit to view</button><button data-v="true" aria-pressed="true">Relative Size</button></div>
         </div>
       </div>
       <div class="row">
@@ -319,6 +343,13 @@ input[type=range]{width:100%;accent-color:var(--accent)}
         <button class="btn" id="sh-pin">Pin for comparison</button>
         <span class="hint" id="sh-pinhint">Pin an orbital, then pick another to see them side by side.</span>
       </div>
+      <div class="row">
+        <button class="btn" id="sh-dark" aria-pressed="false">Dark plot</button>
+        <span class="label" style="margin-left:8px">Stereo 3D</span>
+        <div class="seg" id="sh-stereo"><button data-v="off" aria-pressed="true">Off</button><button data-v="cross">Cross-eyed</button><button data-v="parallel">Parallel</button></div>
+        <label class="row" id="sh-stereo-size" style="gap:8px;flex:1;min-width:180px" hidden><span class="label">Image size</span><input type="range" id="sh-stereo-w" min="360" max="1240" step="10" style="flex:1"></label>
+      </div>
+      <p class="hint" id="sh-stereo-hint" hidden></p>
       <div class="panel">
         <div class="row" style="justify-content:space-between;margin-bottom:6px">
           <span class="label">How far from the nucleus?</span>
@@ -329,8 +360,15 @@ input[type=range]{width:100%;accent-color:var(--accent)}
       </div>
     </div>
     <div class="stack">
-      <div class="panel"><div class="label" style="margin-bottom:10px">Choose an orbital</div><div class="picker" id="sh-picker"></div></div>
-      <div class="panel stack">
+      <div class="panel">
+        <div class="row" style="justify-content:space-between;margin-bottom:10px">
+          <span class="label">Choose an orbital</span>
+          <div class="seg" id="sh-multi"><button data-v="one" aria-pressed="true">One</button><button data-v="many">Several</button></div>
+        </div>
+        <p class="hint" id="sh-multihint" style="margin-bottom:10px" hidden>Tap orbitals to add or remove them, up to 6. Colors now show which orbital a dot belongs to, not its phase.</p>
+        <div class="picker" id="sh-picker"></div>
+      </div>
+      <div class="panel stack" id="sh-info">
         <div class="facts">
           <div><b id="sh-rn"></b><span>radial nodes</span></div>
           <div><b id="sh-an"></b><span>angular nodes</span></div>
@@ -492,7 +530,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const h = (tag, attrs = {}, html) => { const e = document.createElement(tag); for (const k in attrs) { if (k === 'class') e.className = attrs[k]; else if (k === 'style') e.style.cssText = attrs[k]; else e.setAttribute(k, attrs[k]); } if (html != null) e.innerHTML = html; return e; };
-const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const css = (v, el = document.documentElement) => getComputedStyle(el).getPropertyValue(v).trim();
 const LET = ['s', 'p', 'd', 'f'];
 const SUP = { 0: '⁰', 1: '¹', 2: '²', 3: '³', 4: '⁴', 5: '⁵', 6: '⁶', 7: '⁷', 8: '⁸', 9: '⁹' };
 const sup = n => String(n).split('').map(c => SUP[c]).join('');
@@ -582,47 +620,53 @@ const TRUE_SCALE = () => radialTable(4, 0).r99c;
 /* ---- point sampling ---- */
 const sampleCache = {};
 function randDir() { let x, y, z, d; do { x = Math.random() * 2 - 1; y = Math.random() * 2 - 1; z = Math.random() * 2 - 1; d = x * x + y * y + z * z; } while (d > 1 || d < 1e-4); d = Math.sqrt(d); return [x / d, y / d, z / d]; }
-function sampleOrbital(o, count = 26000) {
-  if (sampleCache[o.id]) return sampleCache[o.id];
+// One random point from the (sharpened) cloud distribution: writes x, y, z, sign into out.
+const samplers = {};
+function sampler(o) {
+  if (samplers[o.id]) return samplers[o.id];
   const T = radialTable(o.n, o.l);
   let amax = 0; for (let i = 0; i < 4000; i++) { const [x, y, z] = randDir(); const v = Math.abs(o.f(x, y, z)) ** ANG_EXP; if (v > amax) amax = v; }
   amax *= 1.05;
-  const pos = new Float32Array(count * 3), sign = new Int8Array(count);
-  for (let i = 0; i < count; i++) {
+  return (samplers[o.id] = out => {
     const u = Math.random(); let lo = 0, hi = T.cdfC.length - 1;
     while (lo < hi) { const mid = (lo + hi) >> 1; if (T.cdfC[mid] < u) lo = mid + 1; else hi = mid; }
     const r = T.rs[lo] + (Math.random() - 0.5) * (T.rmax / T.cdf.length);
     let d; do { d = randDir(); } while (Math.random() * amax > Math.abs(o.f(...d)) ** ANG_EXP);
-    pos[i * 3] = d[0] * r; pos[i * 3 + 1] = d[1] * r; pos[i * 3 + 2] = d[2] * r;
-    sign[i] = (radial(o.n, o.l, r) * o.f(...d)) >= 0 ? 1 : -1;
-  }
-  return (sampleCache[o.id] = { pos, sign, r99: T.r99c });
+    out[0] = d[0] * r; out[1] = d[1] * r; out[2] = d[2] * r;
+    out[3] = (radial(o.n, o.l, r) * o.f(...d)) >= 0 ? 1 : -1;
+  });
 }
-// dense 2D cross-section in the orbital's best plane
-function sampleSlice(o, count = 16000) {
-  const key = o.id + '|slice'; if (sampleCache[key]) return sampleCache[key];
-  const T = radialTable(o.n, o.l), R = T.r99c * 1.1, SK = CLOUD_EXP;
-  const c = Math.SQRT1_2;
-  const map = o.plane === 'xy' ? (a, b) => [a, b, 0] : o.plane === 'yz' ? (a, b) => [0, a, b] : o.plane === 'diag' ? (a, b) => [a * c, a * c, b] : (a, b) => [a, 0, b];
-  const dens = (a, b) => { const [x, y, z] = map(a, b); const r = Math.hypot(x, y, z) || 1e-6; return radial(o.n, o.l, r) * o.f(x / r, y / r, z / r); };
-  let dmax = 0; const G = 220;
-  for (let i = 0; i < G; i++) for (let j = 0; j < G; j++) { const v = Math.abs(dens(-R + 2 * R * i / G, -R + 2 * R * j / G)) ** SK; if (v > dmax) dmax = v; }
-  dmax *= 1.2;
+function sampleOrbital(o, count = 26000) {
+  if (sampleCache[o.id]) return sampleCache[o.id];
+  const draw = sampler(o), p = new Float64Array(4);
+  const pos = new Float32Array(count * 3), sign = new Int8Array(count);
+  for (let i = 0; i < count; i++) { draw(p); pos[i * 3] = p[0]; pos[i * 3 + 1] = p[1]; pos[i * 3 + 2] = p[2]; sign[i] = p[3]; }
+  return (sampleCache[o.id] = { pos, sign, r99: radialTable(o.n, o.l).r99c });
+}
+// Slab through the cloud: points from the full 3D distribution that fall within SLICE_HALF of the
+// plane (as a fraction of the cloud radius). A zero-thickness plane caught too few points, notably for s.
+const SLICE_HALF = 0.08;
+function sampleSlice(o, plane = o.plane, count = 18000) {
+  const key = o.id + '|slice|' + plane; if (sampleCache[key]) return sampleCache[key];
+  const T = radialTable(o.n, o.l), w = T.r99c * SLICE_HALF, c = Math.SQRT1_2;
+  const [nx, ny, nz] = plane === 'xy' ? [0, 0, 1] : plane === 'yz' ? [1, 0, 0] : plane === 'diag' ? [c, -c, 0] : [0, 1, 0];
+  const draw = sampler(o), p = new Float64Array(4);
   const pos = new Float32Array(count * 3), sign = new Int8Array(count); let k = 0, guard = 0;
-  while (k < count && guard++ < 4e6) {
-    const a = -R + 2 * R * Math.random(), b = -R + 2 * R * Math.random(); const v = dens(a, b);
-    if (Math.random() * dmax < Math.abs(v) ** SK) { const [x, y, z] = map(a, b); pos[k * 3] = x; pos[k * 3 + 1] = y; pos[k * 3 + 2] = z; sign[k] = v >= 0 ? 1 : -1; k++; }
+  while (k < count && guard++ < 3e6) {
+    draw(p); if (Math.abs(p[0] * nx + p[1] * ny + p[2] * nz) > w) continue;
+    pos[k * 3] = p[0]; pos[k * 3 + 1] = p[1]; pos[k * 3 + 2] = p[2]; sign[k] = p[3]; k++;
   }
   return (sampleCache[key] = { pos: pos.subarray(0, k * 3), sign: sign.subarray(0, k), r99: T.r99c });
 }
 
 /* ================= 3D viewer ================= */
 const viewers = [];
+const MAX_ORBS = 6, orbColorVar = k => `--o${k + 1}`;
 class Viewer {
   constructor(el) {
-    this.el = el; this.spin = false; this.mode = 'whole'; this.scaleMode = 'fit'; this.orb = null; this.follow = null; this.dirty = true;
+    this.el = el; this.spin = false; this.mode = 'whole'; this.scaleMode = 'fit'; this.orb = null; this.orbs = []; this.follow = null; this.eye = null; this.dirty = true; this.q = new THREE.Quaternion();
     const r = this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    r.setPixelRatio(Math.min(devicePixelRatio, 2)); r.localClippingEnabled = true; r.setClearColor(0, 0);
+    r.setPixelRatio(Math.min(devicePixelRatio, 2)); r.setClearColor(0, 0);
     el.prepend(r.domElement);
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(34, 4 / 3, 0.1, 50); this.camera.position.set(0, 0, 4.9);
@@ -642,34 +686,52 @@ class Viewer {
     viewers.push(this);
   }
   resetView() { this.outer.rotation.set(0.35, -0.6, 0); this.dirty = true; }
-  resize() { const w = this.el.clientWidth, hgt = this.el.clientHeight; if (!w || !hgt) return; this.renderer.setSize(w, hgt, false); this.camera.aspect = w / hgt; this.camera.updateProjectionMatrix(); this.dirty = true; }
+  resize() { const w = this.el.clientWidth, hgt = this.el.clientHeight; if (!w || !hgt) return; this.renderer.setSize(w, hgt, false); this.camera.aspect = w / hgt;
+    // Boxes narrower than 4:3 (tall full-screen stereo panels) widen the vertical field of view so the cloud still fits across.
+    this.camera.fov = w / hgt >= 4 / 3 ? 34 : 2 * Math.atan(Math.tan(17 * Math.PI / 180) * (4 / 3) / (w / hgt)) * 180 / Math.PI;
+    this.camera.updateProjectionMatrix(); this.dirty = true; }
   buildAxes() {
     this.axes.clear();
-    const ink = new THREE.Color(css('--muted'));
+    const ink = new THREE.Color(css('--muted', this.el));
     const mat = new THREE.LineBasicMaterial({ color: ink, transparent: true, opacity: 0.45 });
     for (const [ax, v] of [['x', [1, 0, 0]], ['y', [0, 1, 0]], ['z', [0, 0, 1]]]) {
       const g = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(...v).multiplyScalar(-1.15), new THREE.Vector3(...v).multiplyScalar(1.15)]);
       this.axes.add(new THREE.Line(g, mat));
       const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d');
-      x.fillStyle = css('--ink-2'); x.font = 'italic 600 40px Georgia, serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(ax, 32, 34);
+      x.fillStyle = css('--ink-2', this.el); x.font = 'italic 600 40px Georgia, serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(ax, 32, 34);
       const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false }));
       sp.position.set(...v.map(t => t * 1.27)); sp.scale.set(0.16, 0.16, 1); this.axes.add(sp);
     }
     this.dirty = true;
   }
-  show(o) { this.orb = o; this.rebuild(); }
+  // Takes one orbital or an array. Several orbitals share one frame and are colored per orbital, not by phase.
+  show(o) { this.orbs = Array.isArray(o) ? o : [o]; this.orb = this.orbs[0]; this.rebuild(); }
+  // Stereo partner: view the followed viewer's rotation turned by q about the vertical (camera) axis.
+  setEye(q) { this.eye = q; this.rebuild(); this.dirty = true; }
+  retheme() { this.recolor(); this.buildAxes(); }
   setMode(m) { const was = this.mode; this.mode = m; this.rebuild(); if (m === 'slice') this.facePlane(); else if (was === 'slice') this.resetView(); }
   setScale(s) { this.scaleMode = s; this.applyScale(); }
   facePlane() { const p = this.orb && this.orb.plane; this.outer.rotation.set(p === 'xy' ? Math.PI / 2 : 0, p === 'yz' ? -Math.PI / 2 : p === 'diag' ? -Math.PI / 4 : 0, 0); this.dirty = true; }
   rebuild() {
     if (!this.orb) return;
     if (this.points) { this.inner.remove(this.points); this.points.geometry.dispose(); }
-    const S = this.mode === 'slice' ? sampleSlice(this.orb) : sampleOrbital(this.orb);
+    const parts = this.orbs.map(o => this.mode === 'slice' ? sampleSlice(o, this.orb.plane) : sampleOrbital(o));
+    let S = parts[0];
+    if (parts.length > 1) {
+      const len = parts.reduce((t, q) => t + q.sign.length, 0), pos = new Float32Array(len * 3), sign = new Int8Array(len), group = new Uint8Array(len);
+      let at = 0; parts.forEach((q, k) => { pos.set(q.pos, at * 3); sign.set(q.sign, at); group.fill(k, at, at + q.sign.length); at += q.sign.length; });
+      // shuffle so no orbital is drawn wholly on top of the others (points are blended without depth sorting)
+      for (let i = len - 1; i > 0; i--) {
+        const j = rand(i + 1);
+        for (let a = 0; a < 3; a++) { const t = pos[i * 3 + a]; pos[i * 3 + a] = pos[j * 3 + a]; pos[j * 3 + a] = t; }
+        [sign[i], sign[j]] = [sign[j], sign[i]]; [group[i], group[j]] = [group[j], group[i]];
+      }
+      S = { pos, sign, group, r99: Math.max(...parts.map(q => q.r99)) };
+    }
     this.data = S;
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(S.pos, 3));
     g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(S.sign.length * 3), 3));
     this.points = new THREE.Points(g, this.mat); this.inner.add(this.points);
-    this.mat.clippingPlanes = this.mode === 'half' ? [new THREE.Plane(new THREE.Vector3(0, 0, -1), 0)] : [];
     this.mat.size = this.mode === 'slice' ? 0.02 : 0.022; this.mat.needsUpdate = true;
     if (this.mode === 'slice' && this.orb) this.facePlane();
     this.recolor(); this.applyScale();
@@ -677,13 +739,14 @@ class Viewer {
   applyScale() { if (!this.points) return; const s = this.scaleMode === 'true' ? 1 / TRUE_SCALE() : 1 / this.data.r99; this.points.scale.setScalar(s); this.dirty = true; }
   recolor() {
     if (!this.points) return;
-    const a = new THREE.Color(css('--pos')), b = new THREE.Color(css('--neg')), col = this.points.geometry.attributes.color.array;
-    this.data.sign.forEach((s, i) => { const c = s > 0 ? a : b; col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b; });
+    const col = this.points.geometry.attributes.color.array, { sign, group } = this.data;
+    const pal = group ? this.orbs.map((o, k) => new THREE.Color(css(orbColorVar(k), this.el))) : [new THREE.Color(css('--pos', this.el)), new THREE.Color(css('--neg', this.el))];
+    sign.forEach((s, i) => { const c = group ? pal[group[i]] : pal[s > 0 ? 0 : 1]; col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b; });
     this.points.geometry.attributes.color.needsUpdate = true; this.dirty = true;
   }
   visible() { return this.el.offsetParent !== null; }
   frame() {
-    if (this.follow) { if (!this.outer.quaternion.equals(this.follow.outer.quaternion)) { this.outer.quaternion.copy(this.follow.outer.quaternion); this.dirty = true; } }
+    if (this.follow) { const q = this.q.copy(this.follow.outer.quaternion); if (this.eye) q.premultiply(this.eye); if (!this.outer.quaternion.equals(q)) { this.outer.quaternion.copy(q); this.dirty = true; } }
     else if (this.spin) { this.outer.rotation.y += 0.006; this.dirty = true; }
     if (this.dirty) { this.renderer.render(this.scene, this.camera); this.dirty = false; }
   }
@@ -749,15 +812,17 @@ tabInit.addresses = () => {
 
 /* ================= SHAPES ================= */
 tabInit.shapes = () => {
-  const main = new Viewer($('#sh-stage'));
-  let second = null, pinned = null, cur = orbById('3dz²');
+  const main = new Viewer($('#sh-stage')); main.scaleMode = 'true';
+  // sel: the orbitals on show (one, or several in "Several" mode); cur: the last one tapped, which the info panel describes
+  let second = null, pinned = null, stereo = null, stereoMode = 'off', cur = orbById('3dz²'), sel = [cur], multi = false;
+  const shViewers = () => [main, second, stereo].filter(Boolean);
   const picker = $('#sh-picker');
   for (let n = 1; n <= 4; n++) {
     const row = h('div', { class: 'pk-shell' }, `<div class="pk-n">${n}</div>`), subs = h('div', { class: 'pk-subs' });
     for (let l = 0; l < n; l++) {
       const g = h('div', { class: `pk-sub c-${LET[l]}`, role: 'group', 'aria-label': `${n}${LET[l]}` });
       ORBS.filter(o => o.n === n && o.l === l).forEach(o => {
-        const b = h('button', { 'data-id': o.id, 'aria-pressed': 'false', title: o.id }, o.html); b.addEventListener('click', () => select(o)); g.append(b);
+        const b = h('button', { 'data-id': o.id, 'aria-pressed': 'false', title: o.id }, o.html); b.addEventListener('click', () => choose(o)); g.append(b);
       });
       subs.append(g);
     }
@@ -768,30 +833,116 @@ tabInit.shapes = () => {
     const radialTxt = rn === 0 ? 'no radial nodes' : `${rn} radial node${rn > 1 ? 's' : ''} (spherical shell${rn > 1 ? 's' : ''} inside, easiest to see with <b>Thin slice</b>)`;
     return `<b>${o.html}</b> is ${o.l === 0 ? 'a sphere' : o.sub === 'z²' ? 'a dumbbell with a doughnut-shaped ring around its middle' : `a ${SHAPE_WORD[o.l]} shape`}. It has ${o.nodes} and ${radialTxt}. Compared with other ${LET[o.l]} orbitals, a higher shell makes the same shape larger, with more nodes inside.`;
   }
-  function select(o) {
-    cur = o; main.show(o);
-    $$('button', picker).forEach(b => { b.setAttribute('aria-pressed', b.dataset.id === o.id); b.classList.toggle('pinned', pinned && b.dataset.id === pinned.id); });
-    $('#sh-cap').innerHTML = o.html;
-    $('#sh-capsm').textContent = `n = ${o.n} · ℓ = ${o.l} · ${LET[o.l]} subshell`;
+  function choose(o) {
+    if (!multi) sel = [o];
+    else if (sel.includes(o)) { if (sel.length > 1) sel = sel.filter(x => x !== o); }
+    else if (sel.length < MAX_ORBS) sel = [...sel, o];
+    else { $('#sh-multihint').innerHTML = `<b>Up to ${MAX_ORBS} at a time.</b> Tap a selected orbital to remove it first.`; return; }
+    cur = sel.includes(o) ? o : sel[sel.length - 1];
+    render();
+  }
+  segBind($('#sh-multi'), v => {
+    multi = v === 'many'; if (!multi) sel = [cur];
+    const hint = $('#sh-multihint'); hint.hidden = !multi; hint.textContent = `Tap orbitals to add or remove them, up to ${MAX_ORBS}. Colors now show which orbital a dot belongs to, not its phase.`;
+    render();
+  });
+  const legendHTML = set => set.length > 1
+    ? set.map((o, k) => `<span><i class="dot" style="background:var(${orbColorVar(k)})"></i> ${o.html}</span>`).join('')
+    : '<span><i class="dot" style="background:var(--pos)"></i> +</span><span><i class="dot" style="background:var(--neg)"></i> −</span>';
+  function caption(stage, set, sm) {
+    const big = $('.cap .big', stage); big.innerHTML = set.map(o => o.html).join(' + '); big.classList.toggle('multi', set.length > 1);
+    if (sm !== undefined) $('.cap .sm', stage).textContent = sm;
+    $('.legend', stage).innerHTML = legendHTML(set);
+  }
+  function render() {
+    const o = cur;
+    main.show(sel);
+    $$('button', picker).forEach(b => {
+      const k = sel.findIndex(x => x.id === b.dataset.id);
+      b.setAttribute('aria-pressed', k >= 0); b.classList.toggle('pinned', !!pinned && pinned.some(x => x.id === b.dataset.id));
+      if (k >= 0 && sel.length > 1) b.style.setProperty('--c', `var(${orbColorVar(k)})`); else b.style.removeProperty('--c');
+    });
+    const sm = sel.length > 1 ? `${sel.length} orbitals · colors mark orbitals` : `n = ${o.n} · ℓ = ${o.l} · ${LET[o.l]} subshell`;
+    caption($('#sh-stage'), sel, sm);
+    if (stereo) { stereo.show(sel); caption($('#sh-stage3'), sel, sm); }
+    if (second && pinned) caption($('#sh-stage2'), pinned);
     const rn = o.n - o.l - 1; $('#sh-rn').textContent = rn; $('#sh-an').textContent = o.l; $('#sh-tn').textContent = o.n - 1;
     $('#sh-desc').innerHTML = describe(o);
     drawPlot();
   }
-  segBind($('#sh-mode'), v => { main.setMode(v); if (second) second.setMode(v); });
-  segBind($('#sh-scale'), v => { main.setScale(v); if (second) second.setScale(v); });
+  segBind($('#sh-mode'), v => shViewers().forEach(x => x.setMode(v)));
+  segBind($('#sh-scale'), v => shViewers().forEach(x => x.setScale(v)));
   const spinBtn = $('#sh-spin');
   spinBtn.addEventListener('click', () => { main.spin = !main.spin; spinBtn.setAttribute('aria-pressed', main.spin); });
-  $('#sh-pin').addEventListener('click', () => {
-    if (pinned) { pinned = null; $('#sh-stage2').hidden = true; $('#sh-pair').classList.remove('two'); $('#sh-pin').textContent = 'Pin for comparison'; $('#sh-pinhint').hidden = false; }
+  const relayout = () => requestAnimationFrame(() => viewers.forEach(v => v.resize()));
+  function setPinned(on) {
+    if (!on) { pinned = null; $('#sh-stage2').hidden = true; $('#sh-pair').classList.remove('two'); $('#sh-pin').textContent = 'Pin for comparison'; $('#sh-pinhint').hidden = false; }
     else {
-      pinned = cur; $('#sh-stage2').hidden = false; $('#sh-pair').classList.add('two');
-      if (!second) { second = new Viewer($('#sh-stage2')); second.follow = main; }
+      pinned = sel.slice(); $('#sh-stage2').hidden = false; $('#sh-pair').classList.add('two');
+      if (!second) { second = new Viewer($('#sh-stage2')); second.follow = main; second.el.classList.toggle('night', dark); }
       second.mode = main.mode; second.scaleMode = main.scaleMode; second.show(pinned);
-      $('#sh-cap2').innerHTML = pinned.html; $('#sh-pin').textContent = 'Unpin ' + pinned.id; $('#sh-pinhint').hidden = true;
+      $('#sh-pin').textContent = 'Unpin ' + pinned.map(x => x.id).join(', '); $('#sh-pinhint').hidden = true;
     }
-    select(cur);
-    requestAnimationFrame(() => viewers.forEach(v => v.resize()));
+    render(); relayout();
+  }
+  $('#sh-pin').addEventListener('click', () => setPinned(!pinned));
+
+  /* dark plot: light-on-dark palette scoped to the shape stages */
+  let dark = false;
+  try { dark = localStorage.getItem('atlas-shapes-dark') === '1'; } catch (e) {}
+  const darkBtn = $('#sh-dark');
+  function setDark(on) {
+    dark = on; darkBtn.setAttribute('aria-pressed', on);
+    ['#sh-stage', '#sh-stage2', '#sh-stage3'].forEach(id => $(id).classList.toggle('night', on));
+    shViewers().forEach(v => v.retheme());
+    try { localStorage.setItem('atlas-shapes-dark', on ? '1' : '0'); } catch (e) {}
+  }
+  darkBtn.addEventListener('click', () => setDark(!dark));
+
+  /* stereo pair: the right image is the same cloud turned a few degrees about the vertical axis.
+     Turning the cloud by +angle shows what the left eye sees, so for parallel (divergent) viewing the
+     right image turns by −angle relative to the left; for cross-eyed viewing the eyes swap, so +angle. */
+  const STEREO_DEG = 4, stereoW = $('#sh-stereo-w');
+  const STEREO_HINT = {
+    cross: 'Cross your eyes until the two images merge into a third one in the middle, then hold it and let it come into focus. Starting with a fingertip halfway between your eyes and the screen helps.',
+    parallel: 'Look "through" the screen as if at something far away, so each eye sees only its own image and they merge in the middle. Keep the images small (their centers no farther apart than your eyes) until you get the hang of it.',
+  };
+  const eyeTurn = deg => new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), deg * Math.PI / 180);
+  segBind($('#sh-stereo'), v => {
+    stereoMode = v; const on = v !== 'off';
+    if (on && pinned) setPinned(false);
+    $('#sh-pin').disabled = on; $('#sh-pinhint').hidden = on || !!pinned;
+    $('#sh-info').hidden = on;
+    $('.bench', $('#mod-shapes')).classList.toggle('stereo', on);
+    $('#sh-pair').classList.toggle('stereo', on);
+    $('#sh-stage3').hidden = !on; $('#sh-stereo-size').hidden = !on;
+    $('#sh-stereo-hint').hidden = !on; if (on) $('#sh-stereo-hint').textContent = STEREO_HINT[v];
+    if (on) {
+      if (!stereo) { stereo = new Viewer($('#sh-stage3')); stereo.follow = main; }
+      stereo.mode = main.mode; stereo.scaleMode = main.scaleMode; stereo.orb = null;
+      stereoW.value = v === 'parallel' ? 480 : 1240; applyStereoW();
+      stereo.setEye(eyeTurn(v === 'parallel' ? -STEREO_DEG : STEREO_DEG));
+    }
+    render(); relayout();
   });
+  function applyStereoW() { $('#sh-pair').style.setProperty('--stereo-w', stereoW.value + 'px'); relayout(); }
+  stereoW.addEventListener('input', applyStereoW);
+
+  /* full screen / full window */
+  const pair = $('#sh-pair'), expandBtn = $('#sh-expand');
+  function setExpanded(on) {
+    if (pair.classList.contains('expanded') === on) return;
+    pair.classList.toggle('expanded', on); document.body.classList.toggle('no-scroll', on);
+    expandBtn.setAttribute('aria-pressed', on); expandBtn.textContent = on ? '✕ Exit full screen' : '⤢ Full screen';
+    const de = document.documentElement;
+    if (on && de.requestFullscreen && !document.fullscreenElement) de.requestFullscreen().catch(() => {});
+    if (!on && document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    relayout();
+  }
+  expandBtn.addEventListener('click', () => setExpanded(!pair.classList.contains('expanded')));
+  document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) setExpanded(false); });
+  addEventListener('keydown', e => { if (e.key === 'Escape') setExpanded(false); });
+  setDark(dark);
 
   /* radial probability plot */
   const cv = $('#sh-plot'), tip = $('#sh-tip');
@@ -801,7 +952,12 @@ tabInit.shapes = () => {
     if (!W) return;
     cv.width = W * dpr; cv.height = H * dpr;
     const x = cv.getContext('2d'); x.setTransform(dpr, 0, 0, dpr, 0, 0); x.clearRect(0, 0, W, H);
-    const series = [{ o: cur, dash: [] }]; if (pinned && pinned.id !== cur.id) series.push({ o: pinned, dash: [6, 4] });
+    // one curve per shown orbital (solid) and per pinned one (dashed). A set of several is colored like its cloud.
+    const curveCol = (set, k) => set.length > 1 ? css(orbColorVar(k)) : css('--' + LET[set[k].l]);
+    const curveName = (set, o) => set.length > 1 ? o.html : `${o.n}${LET[o.l]}`;
+    const series = sel.map((o, k) => ({ o, dash: [], col: curveCol(sel, k), name: curveName(sel, o) }));
+    if (pinned) pinned.forEach((o, k) => { if (!sel.includes(o)) series.push({ o, dash: [6, 4], col: curveCol(pinned, k), name: curveName(pinned, o) }); });
+    const lead = sel.indexOf(cur);
     const tables = series.map(s => radialTable(s.o.n, s.o.l));
     const rTop = Math.max(...tables.map(t => t.r99)) * 1.1, pTop = Math.max(...tables.map(t => t.peak)) * 1.12;
     const L = 12, R = 10, T = 8, B = 40, pw = W - L - R, ph = H - T - B;
@@ -813,28 +969,28 @@ tabInit.shapes = () => {
     x.textAlign = 'right'; x.fillText('distance from nucleus, in Bohr radii (a₀) →', W - R, H - 3);
     x.strokeStyle = css('--rule'); x.beginPath(); x.moveTo(L, T + ph); x.lineTo(L + pw, T + ph); x.stroke();
     series.forEach((s, k) => {
-      const t = tables[k], col = css('--' + LET[s.o.l]);
+      const t = tables[k], col = s.col;
       x.beginPath(); x.moveTo(X(0), Y(0));
       for (let i = 0; i < t.rs.length; i++) { if (t.rs[i] > rTop) break; x.lineTo(X(t.rs[i]), Y(t.P[i])); }
-      if (k === 0) { const g = x.createLinearGradient(0, T, 0, T + ph); g.addColorStop(0, col + '55'); g.addColorStop(1, col + '08'); x.lineTo(X(Math.min(t.rmax, rTop)), Y(0)); x.closePath(); x.fillStyle = g; x.fill(); x.beginPath(); x.moveTo(X(0), Y(0)); for (let i = 0; i < t.rs.length; i++) { if (t.rs[i] > rTop) break; x.lineTo(X(t.rs[i]), Y(t.P[i])); } }
+      if (k === lead) { const g = x.createLinearGradient(0, T, 0, T + ph); g.addColorStop(0, col + '55'); g.addColorStop(1, col + '08'); x.lineTo(X(Math.min(t.rmax, rTop)), Y(0)); x.closePath(); x.fillStyle = g; x.fill(); x.beginPath(); x.moveTo(X(0), Y(0)); for (let i = 0; i < t.rs.length; i++) { if (t.rs[i] > rTop) break; x.lineTo(X(t.rs[i]), Y(t.P[i])); } }
       x.setLineDash(s.dash); x.strokeStyle = col; x.lineWidth = 2; x.stroke(); x.setLineDash([]);
-      if (k === 0) t.nodes.forEach(r => { if (r > rTop) return; x.strokeStyle = css('--ink-2'); x.setLineDash([2, 3]); x.lineWidth = 1; x.beginPath(); x.moveTo(X(r), T + 14); x.lineTo(X(r), T + ph); x.stroke(); x.setLineDash([]); x.fillStyle = css('--ink-2'); x.textAlign = 'center'; x.fillText('node', X(r), T + 10); });
+      if (k === lead) t.nodes.forEach(r => { if (r > rTop) return; x.strokeStyle = css('--ink-2'); x.setLineDash([2, 3]); x.lineWidth = 1; x.beginPath(); x.moveTo(X(r), T + 14); x.lineTo(X(r), T + ph); x.stroke(); x.setLineDash([]); x.fillStyle = css('--ink-2'); x.textAlign = 'center'; x.fillText('node', X(r), T + 10); });
     });
     if (hoverX != null) { x.strokeStyle = css('--ink'); x.globalAlpha = .35; x.beginPath(); x.moveTo(hoverX, T); x.lineTo(hoverX, T + ph); x.stroke(); x.globalAlpha = 1; }
-    $('#sh-plotlegend').innerHTML = series.map(s => `<span class="row" style="gap:6px"><svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="${css('--' + LET[s.o.l])}" stroke-width="2" ${s.dash.length ? 'stroke-dasharray="6 4"' : ''}/></svg>${s.o.n}${LET[s.o.l]}</span>`).join('');
+    $('#sh-plotlegend').innerHTML = series.map(s => `<span class="row" style="gap:6px"><svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="${s.col}" stroke-width="2" ${s.dash.length ? 'stroke-dasharray="6 4"' : ''}/></svg><span>${s.name}</span></span>`).join('');
   }
   cv.addEventListener('pointermove', e => {
     if (!geom) return; const rect = cv.getBoundingClientRect(), px = e.clientX - rect.left;
     const r = (px - geom.L) / geom.pw * geom.rTop; if (r < 0 || r > geom.rTop) { tip.hidden = true; drawPlot(); return; }
     drawPlot(px);
-    const parts = geom.series.map((s, k) => { const t = geom.tables[k]; const i = Math.min(t.rs.length - 1, Math.round(r / t.rmax * (t.rs.length - 1))); return `${s.o.n}${LET[s.o.l]} ${Math.round(t.P[i] / t.peak * 100)}% of peak`; });
+    const parts = geom.series.map((s, k) => { const t = geom.tables[k]; const i = Math.min(t.rs.length - 1, Math.round(r / t.rmax * (t.rs.length - 1))); return `${s.name.replace(/<[^>]+>/g, '')} ${Math.round(t.P[i] / t.peak * 100)}% of peak`; });
     tip.hidden = false; tip.style.left = Math.min(Math.max(px, 90), rect.width - 90) + 'px'; tip.style.top = '30px';
     tip.textContent = `${r.toFixed(1)} a₀ · ${parts.join(' · ')}`;
   });
   cv.addEventListener('pointerleave', () => { tip.hidden = true; drawPlot(); });
   new ResizeObserver(() => drawPlot()).observe(cv);
   onTheme(() => drawPlot());
-  select(cur);
+  render();
 };
 </script>
 
