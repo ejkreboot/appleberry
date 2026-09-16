@@ -67,8 +67,11 @@ kbd{display:inline-block;min-width:24px;text-align:center;padding:2px 6px;font:6
 
 /* ---------- playfield ---------- */
 .play{display:flex;flex-direction:column;gap:10px;min-width:0}
-.toast{min-height:44px;display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:4px;background:var(--panel);border:1px solid var(--line);font-size:13px;text-wrap:pretty}
-.toast::before{content:"";flex:none;width:8px;height:8px;border-radius:1px;background:var(--muted)}
+.toast{min-height:44px;display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:4px;background:var(--panel);border:1px solid var(--line);font-size:13px}
+.toast::before{content:"";flex:none;width:8px;height:8px;border-radius:1px;background:var(--muted);margin-top:5px}
+.toast .msg{flex:1;min-width:0;line-height:1.55;text-wrap:pretty}
+.toast .msg sup{font-size:.7em;margin-left:1px}
+.toast .pts{font-weight:700;white-space:nowrap}
 .toast.good::before{background:var(--f)} .toast.bad{border-color:var(--bad)} .toast.bad::before{background:var(--bad)}
 .toast.gold{border-color:var(--p)} .toast.gold::before{background:var(--p)}
 .toast b{font-weight:600}
@@ -83,7 +86,7 @@ kbd{display:inline-block;min-width:24px;text-align:center;padding:2px 6px;font:6
 .collabels b{color:var(--text);font-weight:700}
 
 .frame{display:flex;flex-direction:column;padding:6px;background:#080a13;border:2px solid var(--line);border-radius:6px;box-shadow:0 0 0 4px var(--panel),0 18px 40px rgba(0,0,0,.45)}
-.well{position:relative;flex:1;width:100%;min-height:calc(var(--cell) * 6)}
+.well{position:relative;flex:1;width:100%;min-height:calc(var(--cell) * 6);overflow:hidden}
 .well.shake{animation:shake .32s}
 @keyframes shake{20%{transform:translateX(-6px)}40%{transform:translateX(5px)}60%{transform:translateX(-4px)}80%{transform:translateX(2px)}}
 .hopper{position:absolute;left:0;right:0;top:0;height:calc(100% - var(--cell) * 4);border-bottom:2px dashed var(--line);display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding:6px 8px;
@@ -181,6 +184,60 @@ kbd{display:inline-block;min-width:24px;text-align:center;padding:2px 6px;font:6
 .legend i{width:10px;height:10px;border-radius:1px;display:inline-block}
 .note{font-size:11.5px;color:var(--muted);margin:10px 0 0;text-wrap:pretty}
 
+/* ---------- boss: Mary Molecule ---------- */
+.mary{position:absolute;left:0;bottom:0;width:calc(100%/7);height:var(--cell);z-index:4;
+  transform:translateX(calc(var(--c) * 100%));transition:transform .08s steps(2);display:none}
+body.boss .mary{display:block}
+/* the 120x92 frame is scaled so her 90px-tall body fills one cell, then nudged so that body centres in the lane */
+.mary img{position:absolute;bottom:0;left:calc(var(--cell) * 0.078);width:calc(var(--cell) * 4 / 3);height:auto;
+  image-rendering:pixelated;filter:drop-shadow(0 2px 0 rgba(0,0,0,.45))}
+.mary.hop{animation:hop .4s}
+@keyframes hop{40%{transform:translateX(calc(var(--c) * 100%)) translateY(-18%)}}
+.mary.ouch{animation:ouch .4s}
+@keyframes ouch{25%{transform:translateX(calc(var(--c) * 100% - 7%))}
+                75%{transform:translateX(calc(var(--c) * 100% + 7%))}}
+.catchline{position:absolute;left:0;right:0;bottom:var(--cell);border-top:2px dashed #38416b;z-index:1;display:none}
+body.boss .catchline{display:block}
+body.boss .lane,body.boss .electron{display:none}
+body.boss .slot{opacity:.09;filter:saturate(.35)}
+body.boss .hopper{opacity:.3}
+body.boss .pad{grid-template-columns:1fr 1fr}
+body.boss .pad [data-k="down"],body.boss .pad .dropb{display:none}
+#bossPanel{display:none}
+body.boss #bossPanel{display:block}
+body.boss #atomBox{display:none}
+
+/* a falling atom: a one-lane nucleus tile (the thing Mary must line up with) under a wide label */
+.atom{position:absolute;left:0;top:calc(var(--y) * 100%);width:calc(100%/7);z-index:3;pointer-events:none;
+  transform:translateX(calc(var(--c) * 100%))}
+.atom .cfg{position:absolute;bottom:100%;left:-100%;width:300%;margin-bottom:6px;text-align:center;
+  font:600 clamp(12px,2.4vw,16px)/1.55 var(--mono);word-spacing:3px;text-wrap:balance}
+.atom .cfg sup{font-size:.7em;margin-left:1px}
+.atom .cfg .core{color:var(--muted)}
+.atom .acore{position:relative;width:100%;aspect-ratio:1;border-radius:4px;background:var(--panel2);border:2px solid var(--line);
+  box-shadow:inset 0 4px 0 rgba(255,255,255,.1),inset 0 -5px 0 rgba(0,0,0,.35)}
+.atom .az{position:absolute;top:4%;left:9%;font:600 clamp(9px,1.7vw,12px) var(--mono);color:var(--muted)}
+.atom .asym{position:absolute;inset:0;display:grid;place-items:center;font:700 clamp(17px,4.2vw,31px)/1 var(--mono)}
+.atom .asym{color:var(--blk,var(--text))}
+.atom.s{--blk:var(--s)} .atom.p{--blk:var(--p)} .atom.d{--blk:var(--d)} .atom.f{--blk:var(--f)}
+.atom.caught,.atom.zapped,.atom.missed,.atom.passed{animation:vanish .34s forwards}
+.atom.caught .acore{background:var(--f);border-color:var(--f)}
+.atom.zapped .acore{background:var(--bad);border-color:var(--bad)}
+.atom.caught .asym,.atom.zapped .asym{color:var(--ink)}
+.atom.caught .az,.atom.zapped .az{color:rgba(11,13,24,.6)}
+.atom.missed .acore{border-color:var(--bad);box-shadow:0 0 0 2px rgba(255,59,59,.35)}
+.atom.missed .cfg,.atom.passed{opacity:.55}
+@keyframes vanish{to{opacity:0;transform:translateX(calc(var(--c) * 100%)) scale(.6)}}
+
+.queue{display:flex;gap:3px;margin-top:12px}
+.queue i{flex:1;height:10px;border-radius:1px;background:var(--panel2);border:1px solid var(--line)}
+.queue i.ok{background:var(--f);border-color:var(--f)}
+.queue i.miss{background:var(--bad);border-color:var(--bad)}
+.bosstip{font-size:13px;color:var(--muted);margin:12px 0 0;text-wrap:pretty}
+.bosstip b{color:var(--text)}
+.bossrules{margin:14px 0 0;padding-left:17px;font-size:12.5px;line-height:1.5;color:var(--muted);display:flex;flex-direction:column;gap:7px}
+.bossrules b{color:var(--text);font-weight:600}
+
 /* ---------- responsive ---------- */
 @media (max-width:1020px){
   .stage{grid-template-columns:minmax(0,620px)}
@@ -233,6 +290,7 @@ kbd{display:inline-block;min-width:24px;text-align:center;padding:2px 6px;font:6
           <span><kbd>←</kbd> <kbd>→</kbd></span><span>Steer electron</span>
           <span><kbd>↓</kbd></span><span>Fall one row</span>
           <span><kbd>Space</kbd></span><span>Drop into orbital</span>
+          <span><kbd>&larr;</kbd> <kbd>&rarr;</kbd></span><span>Move Mary (boss)</span>
           <span><kbd>P</kbd></span><span>Pause</span>
           <span><kbd>H</kbd></span><span>Show n + l</span>
           <span><kbd>M</kbd></span><span>Sound</span>
@@ -259,6 +317,8 @@ kbd{display:inline-block;min-width:24px;text-align:center;padding:2px 6px;font:6
             <div class="hopper"><span class="skyrule">lowest n+l first · tie → lowest n</span><span>e⁻ source</span></div>
             <div class="lane" id="lane"></div>
             <div class="electron" id="electron"><div class="orb" id="orb"></div></div>
+            <div class="catchline" aria-hidden="true"></div>
+            <div class="mary" id="mary" aria-hidden="true"><img id="marySprite" alt=""></div>
             <div class="card" id="card"></div>
           </div>
         </div>
@@ -274,7 +334,18 @@ kbd{display:inline-block;min-width:24px;text-align:center;padding:2px 6px;font:6
     </section>
 
     <aside class="hud right">
-      <div class="box">
+      <div class="box" id="bossPanel">
+        <div class="lbl">Boss &middot; Mary Molecule</div>
+        <div class="queue" id="queue" aria-hidden="true"></div>
+        <p class="bosstip" id="bossTip"></p>
+        <ul class="bossrules">
+          <li><b>Fill from the bottom up.</b> Lowest n+&#8467; first; on a tie, lowest n.</li>
+          <li><b>Respect the capacity.</b> s holds 2, p holds 6, d holds 10, f holds 14.</li>
+          <li><b>&#8467; must be less than n.</b> There is no 1p, 2d or 3f.</li>
+          <li><b>No gaps.</b> A subshell left half-empty under a filled one is an excited state, not the ground state.</li>
+        </ul>
+      </div>
+      <div class="box" id="atomBox">
         <div class="lbl">Current atom</div>
         <div class="eltile" style="margin-top:10px">
           <div class="big" id="big"><span class="z" id="bZ">26</span><span class="sym" id="bSym">Fe</span><span class="nm" id="bName">Iron</span></div>
@@ -337,14 +408,23 @@ const SUB = [0]; { let i = 0, e = 0; for (const o of SEQ){ i++; for (let k = 0; 
 const PX_MAP = ["....oooo....","..oolllloo..",".olwwllllbo.",".olwlllbbbo.","olllllbbbbdo","olbmmmmmmbdo",
                 "olbmmmmmmbdo","obbbbbbbbddo",".obbbbbbddo.",".odbbbbdddo.","..oodddddoo.","....oooo...."];
 const PX_COL = { o:"#1b2466", l:"#9fb3ff", w:"#ffffff", b:"#5a74ff", d:"#3346c9", m:"#f2f5ff" };
-function pixelElectron(cls = 'px'){
+function pixelSprite(map, pal, cls = 'px'){
   let r = '';
-  PX_MAP.forEach((row, y) => [...row].forEach((ch, x) => { if (ch !== '.') r += `<rect x="${x}" y="${y}" width="1" height="1" fill="${PX_COL[ch]}"/>`; }));
-  return `<svg class="${cls}" viewBox="0 0 12 12" aria-hidden="true">${r}</svg>`;
+  map.forEach((row, y) => [...row].forEach((ch, x) => { if (ch !== '.') r += `<rect x="${x}" y="${y}" width="1" height="1" fill="${pal[ch]}"/>`; }));
+  return `<svg class="${cls}" viewBox="0 0 ${map[0].length} ${map.length}" aria-hidden="true">${r}</svg>`;
 }
+const pixelElectron = (cls = 'px') => pixelSprite(PX_MAP, PX_COL, cls);
+
+// Mary Molecule sprite frames, 120x92 each and registered on a common origin:
+// her body sits at x 6-70 with her feet on y 91, so one placement rule serves all three.
+const MARY_IMG = {
+  idle: "data:image/png;base64,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",
+  catch: "data:image/png;base64,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",
+  miss: "data:image/png;base64,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",
+};
 
 // ---------- state ----------
-const S = { mode:'title', game:'simple', level:1, score:0, best:0, lives:3, streak:0, z:26, fill:{}, col:2, row:SKY+1, hint:false, muted:false };
+const S = { mode:'title', game:'simple', level:1, score:0, best:0, lives:3, streak:0, z:26, fill:{}, col:2, row:SKY+1, hint:false, muted:false, boss:null, pausedFrom:'play' };
 const bestKey = () => 'mm-best-' + S.game;
 function loadBest(){ try { S.best = +localStorage.getItem(bestKey()) || (S.game === 'periodic' ? +localStorage.getItem('mm-best') || 0 : 0); } catch { S.best = 0; } }
 try { S.muted = localStorage.getItem('mm-muted') === '1'; const g = localStorage.getItem('mm-game'); if (g === 'simple' || g === 'periodic') S.game = g; } catch {}
@@ -356,7 +436,7 @@ fillTo(26);
 
 // ---------- DOM ----------
 const $ = id => document.getElementById(id);
-const field = document.querySelector('.field'), well = $('well'), card = $('card'), toast = $('toast'), elec = $('electron'), lane = $('lane');
+const field = document.querySelector('.field'), well = $('well'), card = $('card'), toast = $('toast'), elec = $('electron'), lane = $('lane'), mary = $('mary'), marySprite = $('marySprite');
 const tiles = {};
 for (let n = 1; n <= 7; n++) for (let l = 0; l <= 3; l++){
   const slot = document.createElement('div');
@@ -424,6 +504,7 @@ function renderBoard(){
   renderElectron();
 }
 function renderElectron(){
+  if (bossish()){ mary.style.setProperty('--c', S.col); return; }
   const show = S.mode !== 'over';
   elec.hidden = !show;
   elec.style.setProperty('--c', S.col); elec.style.setProperty('--b', ROWS - 1 - S.row);
@@ -450,7 +531,7 @@ function renderHUD(){
   $('hScore').textContent = S.score.toLocaleString();
   $('hBest').textContent = S.best.toLocaleString();
   $('hStreak').textContent = S.streak;
-  $('hRate').textContent = (tickMs()/1000).toFixed(2) + ' s';
+  $('hRate').textContent = inBoss() ? (fallMs(S.level)/1000).toFixed(1) + ' s' : (tickMs()/1000).toFixed(2) + ' s';
   $('hLives').innerHTML = [0,1,2].map(i => `<span class="pip${i < S.lives ? '' : ' lost'}">${pixelElectron()}</span>`).join('');
   document.querySelectorAll('.seg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === S.game));
   $('hLives').setAttribute('aria-label', S.lives + ' of 3');
@@ -468,12 +549,249 @@ function renderHUD(){
     miniCells[Z].classList.toggle('next', Z === S.z + 1 && S.mode === 'play');
   }
 }
-function render(){ renderBoard(); renderHUD(); }
-function say(html, kind = ''){ toast.className = 'toast' + (kind ? ' ' + kind : ''); toast.innerHTML = html; }
+function render(){ syncBossClass(); renderBoard(); renderHUD(); renderBoss(); }
+function say(html, kind = ''){ toast.className = 'toast' + (kind ? ' ' + kind : ''); toast.innerHTML = `<span class="msg">${html}</span>`; }
 function flash(key, cls, ms){ const t = tiles[key]; if (!t) return; t.classList.remove(cls); void t.offsetWidth; t.classList.add(cls); setTimeout(() => t.classList.remove(cls), ms); }
 
 function showCard(html){ card.innerHTML = `<div class="inner">${html}</div>`; card.hidden = false; const b = card.querySelector('.go'); if (b) b.focus({preventScroll:true}); }
 function hideCard(){ card.hidden = true; card.innerHTML = ''; }
+
+// ---------- boss: Mary Molecule ----------
+// Between levels, atoms fall with their electron arrangement written above them. Mary catches the
+// legal ground states and steps out from under the impossible ones. A boss never costs stability —
+// a wrong call costs points only — and a clean sweep pays a bonus and gives a stability pip back.
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]] = [a[j],a[i]]; } return a; };
+const pick = a => a[Math.floor(Math.random()*a.length)];
+const CORES = [[86,'Rn'],[54,'Xe'],[36,'Kr'],[18,'Ar'],[10,'Ne']];
+const ART = ['An','A','A','An'];              // an s subshell, a p subshell, a d subshell, an f subshell
+
+const LANES = [1,2,3,4,5];                    // atoms use the middle lanes so the wide label stays in frame
+const Z_RANGE = [[1,10],[3,18],[5,24],[11,36],[19,54],[31,86],[37,118]];
+const zRange   = lvl => Z_RANGE[Math.min(lvl, Z_RANGE.length) - 1];
+const fallMs   = lvl => Math.max(3200, Math.round(6000 * Math.pow(.88, lvl - 1)));
+const spawnMs  = lvl => Math.max(1800, Math.round(5000 * Math.pow(.82, lvl - 1)));
+const waveSize = lvl => Math.min(16, 10 + 2 * (lvl - 1));
+const maxAir   = lvl => lvl < 2 ? 2 : 3;
+const catchY   = () => 1 - 2 / ROWS;          // an atom's tile reaches Mary's head here
+const inBoss   = () => S.mode === 'boss';
+const bossish  = () => S.mode === 'bossintro' || S.mode === 'boss' || S.mode === 'bossclear'
+                    || (S.mode === 'paused' && S.pausedFrom === 'boss');
+function syncBossClass(){ document.body.classList.toggle('boss', bossish()); }
+
+// ---- arrangements ----
+const groundConfig = z => { const out = []; let e = 0; for (const o of SEQ){ if (e >= z) break; const c = Math.min(CAP[o.l], z - e); out.push({n:o.n, l:o.l, c}); e += c; } return out; };
+const cfgName  = q => q.n + L[q.l];
+const cfgTotal = cfg => cfg.reduce((s, q) => s + q.c, 0);
+const cloneCfg = cfg => cfg.map(q => ({...q}));
+function cfgHTML(cfg, useCore){
+  let parts = cfg, prefix = '';
+  if (useCore && cfg.length > 5) for (const [cz, cs] of CORES){
+    const g = groundConfig(cz);
+    // only abbreviate a prefix that really is the noble core, so a broken subshell can never hide inside it
+    if (cfg.length > g.length && g.every((q, i) => cfg[i].n === q.n && cfg[i].l === q.l && cfg[i].c === q.c)){
+      prefix = `<span class="core">[${cs}]</span> `; parts = cfg.slice(g.length); break;
+    }
+  }
+  return prefix + parts.map(q => `<span class="b-${L[q.l]}">${cfgName(q)}<sup>${q.c}</sup></span>`).join(' ');
+}
+
+// null if this really is the ground-state arrangement of element Z, else the reason it is not
+function diagnose(cfg, Z, sym){
+  for (const q of cfg){
+    if (q.l >= q.n) return `there is no <b>${cfgName(q)}</b> subshell. ${ART[q.l]} ${L[q.l]} subshell needs n &ge; ${q.l + 1}, so the first one is ${q.l + 1}${L[q.l]}.`;
+    if (q.c > CAP[q.l]) return `<b>${cfgName(q)}<sup>${q.c}</sup></b> is over capacity. ${ART[q.l]} ${L[q.l]} subshell has ${CAP[q.l]/2} orbital${CAP[q.l] > 2 ? 's' : ''}, so it holds at most ${CAP[q.l]} electrons.`;
+  }
+  const tot = cfgTotal(cfg);
+  if (tot !== Z) return `that is ${tot} electron${tot === 1 ? '' : 's'}, but ${sym} has ${Z}.`;
+  const g = groundConfig(Z), gtxt = cfgHTML(g, true);
+  for (let i = 0; i < Math.max(g.length, cfg.length); i++){
+    const a = cfg[i], b = g[i];
+    if (!a || !b) return `ground-state ${sym} is ${gtxt}.`;
+    if (a.n !== b.n || a.l !== b.l){
+      const ka = a.n + a.l, kb = b.n + b.l;
+      return `<b>${cfgName(b)}</b> fills before <b>${cfgName(a)}</b>` +
+        (ka === kb ? ` — they tie at n+&#8467; = ${kb}, so the lower n goes first.` : ` (n+&#8467; = ${kb} against ${ka}).`) +
+        ` Ground state is ${gtxt}.`;
+    }
+    if (a.c !== b.c) return a.c < b.c
+      ? `<b>${cfgName(b)}</b> holds ${a.c} of ${b.c} while higher subshells are already occupied — that is an excited state. The ground state is ${gtxt}.`
+      : `<b>${cfgName(b)}</b> holds ${a.c} where the ground state puts ${b.c}. Ground state: ${gtxt}.`;
+  }
+  return null;
+}
+
+// each mutator returns a broken arrangement, or null when this element cannot break that way
+const MUTATE = {
+  overfull(c){                                        // squeeze one electron too many into a full subshell
+    const full = [];
+    for (let i = 0; i < c.length - 1; i++) if (c[i].c === CAP[c[i].l]) full.push(i);
+    if (!full.length) return null;
+    const i = pick(full.slice(-3));                   // stay near the end so the noble-gas core still abbreviates
+    c[i].c = CAP[c[i].l] + 1;
+    if (--c[c.length - 1].c === 0) c.pop();
+    return c;
+  },
+  ghost(c){                                           // 3d becomes 2d, 2p becomes 1p: an orbital that cannot exist
+    const q = c[c.length - 1];
+    if (!q.l) return null;
+    return c.slice(0, -1).concat({ n:q.l, l:q.l, c:q.c });
+  },
+  excited(c){                                         // promote one electron up a subshell
+    const opts = [], nxt = SEQ[c.length];
+    for (let i = 0; i < c.length - 1; i++) if (c[i + 1].c < CAP[c[i + 1].l]) opts.push(i);
+    if (nxt) opts.push(c.length - 1);
+    if (!opts.length) return null;
+    const i = pick(opts);
+    if (--c[i].c === 0) return null;
+    if (i + 1 < c.length) c[i + 1].c++; else c.push({ n:nxt.n, l:nxt.l, c:1 });
+    return c;
+  },
+  order(c){                                           // skip the subshell that Madelung says fills next
+    const nxt = SEQ[c.length], last = c[c.length - 1];
+    if (!nxt || last.c > CAP[nxt.l]) return null;
+    return c.slice(0, -1).concat({ n:nxt.n, l:nxt.l, c:last.c });
+  }
+};
+function atomSpec(lvl, legal, seen){
+  const [lo, hi] = zRange(lvl);
+  for (let t = 0; t < 60; t++){
+    const Z = lo + Math.floor(Math.random() * (hi - lo + 1)), sym = ELEMENTS[Z-1][0];
+    if (seen && seen.has(Z) && t < 40) continue;      // keep a wave from repeating the same element
+    if (legal){ seen && seen.add(Z); return { Z, cfg: groundConfig(Z), why: null }; }
+    if (Z < 4) continue;
+    for (const kind of shuffle(['overfull','ghost','excited','order'])){
+      const cfg = MUTATE[kind](cloneCfg(groundConfig(Z)), Z);
+      const why = cfg && diagnose(cfg, Z, sym);
+      if (why){ seen && seen.add(Z); return { Z, cfg, why }; }   // trust the checker, never the generator
+    }
+  }
+  const Z = Math.max(lo, 8); return { Z, cfg: groundConfig(Z), why: null };
+}
+function buildWave(lvl){
+  const seen = new Set();
+  return shuffle(Array.from({length: waveSize(lvl)}, (_, i) => atomSpec(lvl, i % 2 === 0, seen)));
+}
+
+// ---- runtime ----
+let atoms = [], spawnAcc = 0;
+function clearAtoms(){ atoms = []; well.querySelectorAll('.atom').forEach(el => el.remove()); }
+const placeAtom = a => a.el.style.setProperty('--y', a.y.toFixed(4));
+
+let maryTimer = 0;
+// hold a reaction frame just long enough to read, then settle back to idle
+function maryPose(frame, cls){
+  marySprite.src = MARY_IMG[frame] || MARY_IMG.idle;
+  mary.classList.remove('hop','ouch'); void mary.offsetWidth; if (cls) mary.classList.add(cls);
+  clearTimeout(maryTimer);
+  maryTimer = setTimeout(maryIdle, 750);
+}
+function maryIdle(){ clearTimeout(maryTimer); marySprite.src = MARY_IMG.idle; mary.classList.remove('hop','ouch'); }
+
+function beginBoss(){
+  clearAtoms(); maryIdle();
+  S.boss = { wave: buildWave(S.level), i:0, right:0, wrong:0, done:0, n: waveSize(S.level), marks:[] };
+  S.mode = 'boss'; S.col = 3; spawnAcc = spawnMs(S.level);
+  hideCard();
+  say('<b>Mary Molecule.</b> Catch the atoms whose arrangement is a real ground state. Step aside from the impossible ones.', 'gold');
+  render(); arpeggio([330,392,494,659], 70);
+}
+function bossSpawn(){
+  const bs = S.boss, spec = bs.wave[bs.i++];
+  const free = LANES.filter(l => !atoms.some(a => a.lane === l && a.y < .3));
+  const lane = pick(free.length ? free : LANES);
+  const el = document.createElement('div');
+  el.className = 'atom ' + L[spec.cfg[spec.cfg.length - 1].l];
+  el.style.setProperty('--c', lane);
+  el.innerHTML = `<div class="cfg">${cfgHTML(spec.cfg, true)}</div>` +
+    `<div class="acore"><span class="az">${spec.Z}</span><span class="asym">${ELEMENTS[spec.Z-1][0]}</span></div>`;
+  well.insertBefore(el, card);
+  const a = { ...spec, lane, y:-.2, el };
+  atoms.push(a); placeAtom(a);
+}
+function bossResolve(a){
+  const bs = S.boss, nm = ELEMENTS[a.Z - 1][1], txt = cfgHTML(a.cfg, true);
+  const caught = a.lane === S.col, legal = !a.why;
+  let ok, pts, msg;
+  if (legal && caught){
+    ok = true; pts = 50 * S.level + Math.min(S.streak, 20) * 2 * S.level;
+    msg = `Caught <b>${nm}</b>, ${txt}. That is the ground state.`;
+  } else if (!legal && !caught){
+    ok = true; pts = 25 * S.level;
+    msg = `Dodged. That <b>${nm}</b> was impossible: ${a.why}`;
+  } else if (!legal && caught){
+    ok = false; pts = -75 * S.level;
+    msg = `That <b>${nm}</b> could not exist: ${a.why}`;
+  } else {
+    ok = false; pts = -25 * S.level;
+    msg = `Missed <b>${nm}</b>, ${txt}. That one was a legal ground state.`;
+  }
+  bs.marks[bs.done] = ok ? 'ok' : 'miss'; bs.done++;
+  if (ok){ bs.right++; S.streak++; } else { bs.wrong++; S.streak = 0; }
+  S.score = Math.max(0, S.score + pts); saveBest();
+  say(`${msg} <span class="pts" style="color:var(${ok ? '--p' : '--bad'})">${pts > 0 ? '+' : ''}${pts.toLocaleString()}</span>`, ok ? 'good' : 'bad');
+
+  a.el.classList.add(caught ? (legal ? 'caught' : 'zapped') : (legal ? 'missed' : 'passed'));
+  const el = a.el; setTimeout(() => el.remove(), 420);
+  atoms = atoms.filter(x => x !== a);
+  if (ok && caught) maryPose('catch', 'hop');          // she is holding the atom she just caught
+  else if (!ok) maryPose('miss', caught ? 'ouch' : null);
+  if (ok && caught) tone(523, .09, 'square', .045, 1.5);
+  else if (ok) tone(392, .06, 'triangle', .03);
+  else { tone(110, .25, 'sawtooth', .06, .5); well.classList.remove('shake'); void well.offsetWidth; well.classList.add('shake'); setTimeout(() => well.classList.remove('shake'), 340); }
+  renderHUD(); renderBoss();
+}
+function bossFrame(dt){
+  const bs = S.boss, dur = fallMs(S.level), end = catchY();
+  spawnAcc += dt;
+  if (bs.i < bs.wave.length && atoms.length < maxAir(S.level) && (spawnAcc >= spawnMs(S.level) || !atoms.length)){
+    spawnAcc = 0; bossSpawn();
+  }
+  for (const a of atoms.slice()){
+    a.y += dt / dur;
+    if (a.y >= end) bossResolve(a); else placeAtom(a);
+  }
+  if (bs.done >= bs.n && !atoms.length) endBoss();
+}
+function endBoss(){
+  const bs = S.boss, perfect = bs.wrong === 0;
+  let bonus = 0, pip = false;
+  if (perfect){
+    bonus = 500 * S.level; S.score += bonus; saveBest();
+    if (S.lives < 3){ S.lives++; pip = true; }
+  }
+  S.mode = 'bossclear'; render();
+  arpeggio(perfect ? [523,659,784,1047,1319] : [392,440,494], 80);
+  showCard(`<h2>${perfect ? 'Perfect run' : 'Mary survives'}</h2>
+    <p>${bs.right} of ${bs.n} calls right.${perfect
+      ? ' Every legal atom caught, every impossible one dodged.'
+      : ` ${bs.wrong} got the better of her. The clean-sweep bonus needs all ${bs.n}.`}</p>
+    <p class="rule">${perfect ? `Clean sweep +${bonus.toLocaleString()}${pip ? ' &middot; +1 stability' : ''} &middot; ` : ''}Score ${S.score.toLocaleString()}</p>
+    <button class="go" data-act="adv">On to level ${S.level + 1}</button>`);
+}
+function renderBoss(){
+  const bs = S.boss;
+  if (!bossish() || !bs) return;
+  $('queue').innerHTML = bs.marks.concat(Array(Math.max(0, bs.n - bs.marks.length)).fill(''))
+    .map(m => `<i class="${m}"></i>`).join('');
+  $('bossTip').innerHTML = `Atom <b>${Math.min(bs.done + 1, bs.n)}</b> of ${bs.n} &middot; ${bs.right} right, ${bs.wrong} wrong.<br>` +
+    `Slide under it with <kbd>&larr;</kbd> <kbd>&rarr;</kbd> if the arrangement is possible. Stay clear if it is not.`;
+}
+function bossIntro(){
+  clearAtoms();
+  S.mode = 'bossintro'; S.boss = null; S.col = 3;
+  render();
+  const [lo, hi] = zRange(S.level);
+  showCard(`<h2>Boss: Mary Molecule</h2>
+    <p>Atoms rain down with their electron arrangement written above them. Some of those arrangements are impossible.</p>
+    <ul>
+      <li><b>Possible?</b> Slide Mary under it with <kbd>&larr;</kbd> <kbd>&rarr;</kbd> and catch it.</li>
+      <li><b>Impossible?</b> Get out of the way and let it fall past.</li>
+      <li>${waveSize(S.level)} atoms, Z ${lo} to ${hi}, one every ${(spawnMs(S.level)/1000).toFixed(1)} s.</li>
+      <li>Your stability is safe here. Wrong calls cost points; a clean sweep pays <b>${(500*S.level).toLocaleString()}</b> and gives a pip back.</li>
+    </ul>
+    <p class="rule">Ground state: lowest n+&#8467; first, tie to lowest n, never past capacity, never with a gap.</p>
+    <button class="go" data-act="beginboss">Let them fall</button>`);
+}
 
 // ---------- game flow ----------
 let acc = 0;
@@ -486,21 +804,29 @@ function setGame(g){
 }
 function start(g){
   if (typeof g === 'string') setGame(g);
-  Object.assign(S, { level:1, score:0, lives:3, streak:0 });
-  fillTo(0); spawn(); S.mode = 'play'; hideCard();
+  Object.assign(S, { level:1, score:0, lives:3, streak:0, boss:null });
+  clearAtoms(); fillTo(0); spawn(); S.mode = 'play'; hideCard();
   say(simple()
     ? '<b>Simple mode.</b> Each drop fills a whole subshell. Steer with ← →, then drop with Space.'
     : '<b>Periodic mode.</b> Electron <b>#1</b> incoming. Steer with ← →, then drop with Space.');
   arpeggio([262,330,392,523]); render();
 }
-function nextLevel(){
-  S.level++; S.lives = Math.min(3, S.lives + 1); fillTo(0); spawn(); S.mode = 'play'; hideCard();
+function advanceLevel(){
+  S.level++; S.lives = Math.min(3, S.lives + 1); S.boss = null;
+  clearAtoms(); fillTo(0); spawn(); S.mode = 'play'; hideCard();
   say(`Level <b>${S.level}</b>. Electrons now fall every ${(tickMs()/1000).toFixed(2)} s.`, 'gold');
   render();
 }
 function pause(){
-  if (S.mode === 'play'){ S.mode = 'paused'; showCard(`<h2>Paused</h2><p>${simple() ? 'Subshell ' + SUB[S.z+1] : 'Electron #' + (S.z+1)} is holding position.</p><button class="go" data-act="resume">Resume</button>`); renderHUD(); }
-  else if (S.mode === 'paused'){ S.mode = 'play'; acc = 0; hideCard(); renderHUD(); }
+  if (S.mode === 'play' || inBoss()){
+    S.pausedFrom = S.mode; S.mode = 'paused';
+    showCard(`<h2>Paused</h2><p>${S.pausedFrom === 'boss' ? 'The atoms are holding in mid-air.'
+      : (simple() ? 'Subshell ' + SUB[S.z+1] : 'Electron #' + (S.z+1)) + ' is holding position.'}</p>
+      <button class="go" data-act="resume">Resume</button>`);
+    render();
+  } else if (S.mode === 'paused'){
+    S.mode = S.pausedFrom === 'boss' ? 'boss' : 'play'; acc = 0; spawnAcc = 0; hideCard(); render();
+  }
 }
 function saveBest(){ if (S.score > S.best){ S.best = S.score; try { localStorage.setItem(bestKey(), S.best); } catch {} } }
 
@@ -520,7 +846,7 @@ function requestGame(g){
 function keep(){ if (confirmReturn){ const f = confirmReturn; confirmReturn = null; f(); } }
 
 function move(d){
-  if (S.mode !== 'play') return;
+  if (S.mode !== 'play' && !inBoss()) return;
   const c = Math.min(6, Math.max(0, S.col + d));
   if (c !== S.col){ S.col = c; tone(196, .03, 'square', .018); renderElectron(); }
 }
@@ -567,8 +893,8 @@ function correct(key, o){
     arpeggio([392,523,659,784,1047,1319], 90);
     showCard(`<h2>Level ${S.level} clear</h2><p>${simple() ? 'All 19 subshells filled' : 'All 118 electrons placed'}. You built Oganesson, [Rn] 7s² 5f¹⁴ 6d¹⁰ 7p⁶, one orbital at a time.</p>
       <p class="rule">Level bonus +${bonus.toLocaleString()} · Score ${S.score.toLocaleString()}</p>
-      <p>Next level: electrons fall every ${(Math.max(110, Math.round(900 * Math.pow(0.8, S.level)))/1000).toFixed(2)} s, and you get back 1 stability.</p>
-      <button class="go" data-act="next">Next level</button>`);
+      <p>Something is waiting at the gate before level ${S.level + 1}: <b>Mary Molecule</b>. Your stability is safe there.</p>
+      <button class="go" data-act="next">Face the boss</button>`);
     return;
   }
   spawn(); render();
@@ -600,7 +926,9 @@ document.addEventListener('keydown', e => {
   if (S.mode === 'confirm'){ if (k === 'Escape') keep(); else if (primary){ const b = card.querySelector('.go'); if (b) b.click(); } return; }
   if (S.mode === 'title' && primary) return start();
   if (S.mode === 'over' && primary) return start();
-  if (S.mode === 'levelclear' && primary) return nextLevel();
+  if (S.mode === 'levelclear' && primary) return bossIntro();
+  if (S.mode === 'bossintro' && primary) return beginBoss();
+  if (S.mode === 'bossclear' && primary) return advanceLevel();
   if (S.mode === 'paused' && (primary || k === 'p' || k === 'P' || k === 'Escape')) return pause();
   switch (k){
     case 'ArrowLeft': case 'a': case 'A': move(-1); break;
@@ -617,13 +945,15 @@ card.addEventListener('click', e => {
   b.blur();
   const act = b.dataset.act;
   if (act === 'simple' || act === 'periodic'){ confirmReturn = null; return start(act); }
-  ({ start: () => start(), next: nextLevel, resume: pause, keep })[act]();
+  ({ start: () => start(), next: bossIntro, beginboss: beginBoss, adv: advanceLevel, resume: pause, keep })[act]();
 });
 document.querySelectorAll('.pad button').forEach(b => b.addEventListener('pointerdown', e => {
   e.preventDefault();
   const k = b.dataset.k;
   if (S.mode === 'title' || S.mode === 'over'){ if (k === 'drop') start(); return; }
-  if (S.mode === 'levelclear'){ if (k === 'drop') nextLevel(); return; }
+  if (S.mode === 'levelclear'){ if (k === 'drop') bossIntro(); return; }
+  if (S.mode === 'bossintro'){ if (k === 'drop' || k === 'left' || k === 'right') beginBoss(); return; }
+  if (S.mode === 'bossclear'){ if (k === 'drop' || k === 'left' || k === 'right') advanceLevel(); return; }
   ({ left: () => move(-1), right: () => move(1), down: fall, drop })[k]();
 }));
 function toggleHint(){ S.hint = !S.hint; document.body.classList.toggle('hint', S.hint); $('hintBtn').setAttribute('aria-pressed', S.hint); }
@@ -632,7 +962,7 @@ document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click'
 $('hintBtn').addEventListener('click', e => { toggleHint(); e.currentTarget.blur(); });
 $('muteBtn').addEventListener('click', e => { toggleMute(); e.currentTarget.blur(); });
 $('muteBtn').setAttribute('aria-pressed', S.muted);
-window.addEventListener('blur', () => { if (S.mode === 'play') pause(); });
+window.addEventListener('blur', () => { if (S.mode === 'play' || inBoss()) pause(); });
 
 // ---------- loop ----------
 let last = null;
@@ -640,6 +970,7 @@ function frame(t){
   if (last === null) last = t;
   const dt = Math.min(250, t - last); last = t;
   if (S.mode === 'play'){ acc += dt; const ms = tickMs(); while (acc >= ms && S.mode === 'play'){ acc -= ms; tick(); } }
+  else if (inBoss()) bossFrame(dt);
   requestAnimationFrame(frame);
 }
 
@@ -670,24 +1001,30 @@ function titleCard(){
       <li>If the electron reaches the s row, it lands there on its own.</li>
       <li>The wrong orbital costs 1 stability. Lose all 3 and the atom falls apart.</li>
       <li>Complete oganesson to level up. Each level falls faster.</li>
+      <li>A <b>boss</b> waits between levels. Bosses cost points, never stability.</li>
       <li>Grayed-out tiles like 1p and 3f aren't real orbitals.</li>
     </ul>
     <p style="color:var(--muted);font-size:12px">Press <kbd>Space</kbd> to start in ${simple() ? 'Simple' : 'Periodic'} mode.</p>`);
 }
 
 function boot(data){
+  let toBoss = false;
   if (data && data.S && data.S.fill){
     Object.assign(S, data.S);
-    if (S.mode === 'play' || S.mode === 'confirm') S.mode = 'paused';
+    // a boss is mid-air state that cannot be restored from a snapshot, so it starts over at its intro
+    if (bossish()){ S.mode = 'title'; toBoss = true; }
+    else if (S.mode === 'play' || S.mode === 'confirm') S.mode = 'paused';
     if (S.row >= ROWS) S.row = ROWS - 1;
   }
   $('orb').innerHTML = pixelElectron();
+  marySprite.src = MARY_IMG.idle;
   fitBoard();
   if ('ResizeObserver' in window) new ResizeObserver(fitBoard).observe(well); else window.addEventListener('resize', fitBoard);
   render();
   document.body.classList.toggle('hint', S.hint); $('hintBtn').setAttribute('aria-pressed', S.hint);
-  if (S.mode === 'title') titleCard();
-  else if (S.mode === 'paused'){ S.mode = 'play'; pause(); }
+  if (toBoss) bossIntro();
+  else if (S.mode === 'title') titleCard();
+  else if (S.mode === 'paused'){ S.mode = S.pausedFrom === 'boss' ? 'boss' : 'play'; pause(); }
   else if (S.mode === 'over' || S.mode === 'levelclear'){ start(); }
   requestAnimationFrame(frame);
 }
