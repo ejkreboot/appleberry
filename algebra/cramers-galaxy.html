@@ -35,6 +35,7 @@ sub{font-size:.7em;vertical-align:-.25em;line-height:0}
 
 /* ---------- header ---------- */
 .top{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.top > div:last-child{flex:1 1 300px;min-width:0}
 .logo{width:62px;height:62px;flex:none;background:var(--d);color:var(--ink);border-radius:3px;position:relative;display:grid;place-items:center;
   box-shadow:inset 0 4px 0 rgba(255,255,255,.4),inset 0 -5px 0 rgba(0,0,0,.28),inset 4px 0 0 rgba(255,255,255,.18),inset -4px 0 0 rgba(0,0,0,.18)}
 .logo .m{display:grid;grid-template-columns:1fr 1fr;gap:1px 7px;padding:2px 5px;border-left:3px solid var(--ink);border-right:3px solid var(--ink);font:700 13px/1.15 var(--mono)}
@@ -77,7 +78,7 @@ kbd{display:inline-block;min-width:24px;text-align:center;padding:2px 6px;font:6
 .toast b{font-weight:600}
 
 .frame{padding:6px;background:#080a13;border:2px solid var(--line);border-radius:6px;box-shadow:0 0 0 4px var(--panel),0 18px 40px rgba(0,0,0,.45)}
-.screen{position:relative;width:100%;max-width:max(300px,calc((100dvh - 210px) * .75));aspect-ratio:3/4;margin:0 auto;overflow:hidden}
+.screen{position:relative;width:100%;max-width:max(300px,calc((100dvh - 250px) * .75));aspect-ratio:3/4;margin:0 auto;overflow:hidden}
 .screen canvas{display:block;width:100%;height:100%;touch-action:none}
 .screen.shake{animation:shake .32s}
 @keyframes shake{20%{transform:translateX(-6px)}40%{transform:translateX(5px)}60%{transform:translateX(-4px)}80%{transform:translateX(2px)}}
@@ -235,10 +236,18 @@ const PIX = '"Silkscreen","Courier New",monospace', MONO = '"IBM Plex Mono",ui-m
 const MINUS = '−';
 
 // the determinant frame: four cells, top-left, top-right, bottom-left, bottom-right
-const CW = 104, CH = 82, GAP = 16;
-const FX = W / 2 - CW - GAP / 2, FY = 120;
-const CELLS = [0,1,2,3].map(k => ({ x: FX + (k % 2) * (CW + GAP), y: FY + (k >> 1) * (CH + GAP), w: CW, h: CH }));
-const FRAME = { x: FX - 16, y: FY - 10, w: 2 * CW + GAP + 32, h: 2 * CH + GAP + 20 };
+// early levels get bigger cells; ease() runs from 1 at level 1 down to 0 by level 7
+const GAP = 16, FY = 120;
+const ease = lvl => Math.max(0, 1 - (lvl - 1) / 6);
+let CW, CH, FX, CELLS, FRAME;
+function layout(lvl){
+  const e = ease(lvl);
+  CW = Math.round(104 + 26 * e); CH = Math.round(82 + 20 * e);
+  FX = W / 2 - CW - GAP / 2;
+  CELLS = [0,1,2,3].map(k => ({ x: FX + (k % 2) * (CW + GAP), y: FY + (k >> 1) * (CH + GAP), w: CW, h: CH }));
+  FRAME = { x: FX - 16, y: FY - 10, w: 2 * CW + GAP + 32, h: 2 * CH + GAP + 20 };
+}
+layout(1);
 const CELL_NAME = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];
 const SHIP_Y = 596, BUG_R = 24;
 
@@ -466,6 +475,9 @@ const stars = Array.from({ length: 80 }, () => ({ x: rand(0, W), y: rand(0, H), 
 const need = k => S.sys[TARGETS[S.target].roles[k]];
 const swoopSpeed = () => Math.min(430, 230 + 18 * (S.level - 1));
 const driftSpeed = () => Math.min(150, 52 * Math.pow(1.1, S.level - 1));
+// a bug crossing its own cell slows further and hovers at the centre, easing off as levels advance
+const homeSlow  = () => 1 - .55 * ease(S.level);
+const homeHover = () => 1.3 * ease(S.level);
 const diveChance = () => S.level >= 4 ? Math.min(.4, .15 + .04 * (S.level - 4)) : 0;
 const rndField = () => ({ x: rand(40, W - 40), y: rand(40, 420) });
 function offPoint(){
@@ -489,6 +501,7 @@ function segPos(s, u){
     const m = 1 - u, A = m*m*m, B = 3*m*m*u, Cc = 3*m*u*u, Dd = u*u*u;
     return { x: A*s.p0.x + B*s.p1.x + Cc*s.p2.x + Dd*s.p3.x, y: A*s.p0.y + B*s.p1.y + Cc*s.p2.y + Dd*s.p3.y };
   }
+  if (s.type === 'hold') return s.p;
   if (s.type === 'line') return { x: s.p0.x + (s.p1.x - s.p0.x) * u, y: s.p0.y + (s.p1.y - s.p0.y) * u };
   if (s.type === 'loop'){ const a = s.a0 + s.dir * u * Math.PI * 2; return { x: s.c.x + Math.cos(a) * s.r, y: s.c.y + Math.sin(a) * s.r }; }
   return null;
@@ -515,9 +528,19 @@ function plan(b){
   const half = (vert ? c.h : c.w) / 2 + 14;
   const A = { x: cx - dir.x * half, y: cy - dir.y * half }, B = { x: cx + dir.x * half, y: cy + dir.y * half };
   b.segs.push(bez(P, rndField(), { x: A.x - dir.x * 90, y: A.y - dir.y * 90 }, A, sw));
-  const drift = line(A, B, driftSpeed());
-  drift.onEnd = () => release(b);
-  b.segs.push(drift);
+  const Cc = { x: cx, y: cy };
+  if (need(k) === b.v){
+    const ds = driftSpeed() * homeSlow(), hv = homeHover();
+    b.segs.push(line(A, Cc, ds));
+    if (hv > .05) b.segs.push({ type:'hold', p: Cc, dur: hv });
+    const tail = line(Cc, B, ds);
+    tail.onEnd = () => release(b);
+    b.segs.push(tail);
+  } else {
+    const drift = line(A, B, driftSpeed());
+    drift.onEnd = () => release(b);
+    b.segs.push(drift);
+  }
   if (Math.random() < .35) b.segs.push(loopSeg(B, sw * .8));
   const out = { x: B.x + dir.x * 110, y: B.y + dir.y * 110 };
   if (Math.random() < diveChance()){
@@ -569,6 +592,7 @@ function burst(x, y, color, n = 16, sp = 160){
 
 // ---------- main game flow ----------
 function startSystem(){
+  layout(S.level);
   S.target = targetOf(S.level);
   S.sys = makeSystem(tierOf(S.level));
   S.filled = [null,null,null,null]; S.banner = null;
@@ -676,7 +700,7 @@ function advanceLevel(){
 function updatePlay(dt){
   if (S.banner){ S.banner.t -= dt; if (S.banner.t <= 0) afterBanner(); return; }
   for (const b of bugs) stepBug(b, dt);
-  // bullets against bugs; a bug behind a filled cell is shielded
+  // bullets against bugs; a bug crossing a filled cell is shielded
   for (const bl of bullets){
     for (const b of bugs){
       if (b.hidden || b.dead > 0) continue;
@@ -864,17 +888,17 @@ function pill(text, x, y, border, size = 18, fill = C.panel){
 // "N" with a small subscript x or y
 function targetLabel(t, x, y, size){
   ctx.textBaseline = 'middle'; ctx.fillStyle = C.blue;
-  ctx.font = `700 ${size}px ${PIX}`; ctx.textAlign = 'right';
+  ctx.font = `700 ${size}px ${MONO}`; ctx.textAlign = 'right';
   const tail = ' =';
   ctx.fillStyle = C.text; ctx.fillText(tail, x, y);
   let xr = x - ctx.measureText(tail).width;
   ctx.fillStyle = C.blue;
   if (t !== 'D'){
-    ctx.font = `700 ${size * .55}px ${PIX}`;
+    ctx.font = `700 ${size * .6}px ${MONO}`;
     const sub = t === 'Nx' ? 'x' : 'y';
     ctx.fillText(sub, xr, y + size * .3);
     xr -= ctx.measureText(sub).width + 1;
-    ctx.font = `700 ${size}px ${PIX}`;
+    ctx.font = `700 ${size}px ${MONO}`;
   }
   ctx.fillText(t === 'D' ? 'D' : 'N', xr, y);
 }
@@ -884,13 +908,24 @@ function drawBars(x0, x1, y0, y1, color = C.text){
 }
 function drawBug(b, t){
   const flap = Math.floor(t * 4 + b.ph) % 2;
-  ctx.globalAlpha = 1;
+  // over a filled cell a bug is shielded from fire, so it flies faded
+  const k = cellAt(b.x, b.y);
+  ctx.globalAlpha = k !== null && S.filled[k] !== null ? .45 : 1;
   drawMap(BUG_MAPS[flap ? b.map : 1 - b.map], b.pal, Math.round(b.x - 16), Math.round(b.y - 26), 3);
   pill(fmt(b.v), b.x, b.y + 11, b.pal.b);
+  ctx.globalAlpha = 1;
 }
+const narrow = window.matchMedia('(max-width:1020px)');
 function drawFrame(t){
   const T = TARGETS[S.target];
-  targetLabel(S.target, FRAME.x - 10, FY + CH + GAP / 2, 30);
+  // on narrow screens the system panel is out of view, so the equations ride along at the top of the field
+  if (narrow.matches && S.sys){
+    const s = S.sys;
+    ctx.font = `600 19px ${MONO}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = C.muted;
+    ctx.fillText(eqText(s.a1, s.b1, s.c1, s.forms[0]), W / 2, 34);
+    ctx.fillText(eqText(s.a2, s.b2, s.c2, s.forms[1]), W / 2, 62);
+  }
+  targetLabel(S.target, FRAME.x - 8, FY + CH + GAP / 2, 32);
   for (let k = 0; k < 4; k++){
     const c = CELLS[k];
     if (S.filled[k] === null){
@@ -910,10 +945,12 @@ function drawFilled(t){
   for (let k = 0; k < 4; k++){
     const c = CELLS[k];
     if (S.filled[k] !== null){
-      ctx.fillStyle = C.blue; ctx.fillRect(c.x, c.y, c.w, c.h);
-      ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(c.x, c.y, c.w, 4);
-      ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.fillRect(c.x, c.y + c.h - 5, c.w, 5);
-      ctx.fillStyle = C.ink; ctx.font = `700 34px ${MONO}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      // a dark fill keeps the bright bugs readable as they cross a locked cell
+      ctx.fillStyle = '#0f2a40'; ctx.fillRect(c.x, c.y, c.w, c.h);
+      ctx.fillStyle = 'rgba(63,184,255,.45)'; ctx.fillRect(c.x, c.y, c.w, 4);
+      ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(c.x, c.y + c.h - 5, c.w, 5);
+      ctx.strokeStyle = C.blue; ctx.lineWidth = 2; ctx.strokeRect(c.x + 1, c.y + 1, c.w - 2, c.h - 2);
+      ctx.fillStyle = C.blue; ctx.font = `700 34px ${MONO}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText(fmt(S.filled[k]), c.x + c.w / 2, c.y + c.h / 2 + 1);
     }
     const fx = cellFx[k];
@@ -924,7 +961,7 @@ function drawFilled(t){
   }
   drawBars(FRAME.x, FRAME.x + FRAME.w, FRAME.y, FRAME.y + FRAME.h);
   if (S.banner){
-    ctx.font = `700 30px ${PIX}`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillStyle = C.gold;
+    ctx.font = `700 24px ${MONO}`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillStyle = C.gold;
     const txt = '= ' + fmt(S.banner.val), tw = ctx.measureText(txt).width;
     const xr = FRAME.x + FRAME.w + 8;
     if (xr + tw < W - 4) ctx.fillText(txt, xr, FY + CH + GAP / 2);
@@ -977,8 +1014,8 @@ function draw(t){
   if (bossish()) drawBoss(t);
   else if (S.sys){
     drawFrame(t);
-    for (const b of bugs) if (!b.hidden && !(b.dead > 0)) drawBug(b, t);
     drawFilled(t);
+    for (const b of bugs) if (!b.hidden && !(b.dead > 0)) drawBug(b, t);
   }
   ctx.fillStyle = C.gold;
   for (const b of bullets) ctx.fillRect(Math.round(b.x - 1.5), Math.round(b.y - 8), 3, 12);
