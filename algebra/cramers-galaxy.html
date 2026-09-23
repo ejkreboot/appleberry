@@ -1,0 +1,1051 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cramer's Galaxy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Silkscreen:wght@400;700&display=swap">
+<style>
+:root{
+  --ground:#0b0d18; --panel:#131728; --panel2:#1a1f35; --line:#2a3152; --text:#e4e9ff; --muted:#8a93b8;
+  --s:#ff5a74; --p:#ffc53d; --d:#3fb8ff; --f:#6fe08a; --bad:#ff3b3b; --orb:#f2f5ff; --ink:#0b0d18;
+  --pixel:"Silkscreen","Courier New",monospace;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{
+  margin:0;
+  background-color:var(--ground);
+  background-image:
+    linear-gradient(rgba(42,49,82,.28) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(42,49,82,.28) 1px,transparent 1px);
+  background-size:28px 28px;
+  color:var(--text); font-family:var(--mono); font-size:14px; line-height:1.45;
+  padding-inline:16px;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--p);outline-offset:2px}
+sub{font-size:.7em;vertical-align:-.25em;line-height:0}
+
+.app{max-width:1220px;margin:0 auto;padding-block:20px 32px;display:flex;flex-direction:column;gap:18px}
+
+/* ---------- header ---------- */
+.top{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.logo{width:62px;height:62px;flex:none;background:var(--d);color:var(--ink);border-radius:3px;position:relative;display:grid;place-items:center;
+  box-shadow:inset 0 4px 0 rgba(255,255,255,.4),inset 0 -5px 0 rgba(0,0,0,.28),inset 4px 0 0 rgba(255,255,255,.18),inset -4px 0 0 rgba(0,0,0,.18)}
+.logo .m{display:grid;grid-template-columns:1fr 1fr;gap:1px 7px;padding:2px 5px;border-left:3px solid var(--ink);border-right:3px solid var(--ink);font:700 13px/1.15 var(--mono)}
+h1{margin:0;font:700 clamp(22px,4.2vw,40px)/1 var(--pixel);letter-spacing:.02em;text-wrap:balance}
+h1 .a{color:var(--d)} h1 .b{color:var(--p)}
+.tag{margin:6px 0 0;color:var(--muted);font-size:13px}
+.tag b{color:var(--text);font-weight:600}
+
+/* ---------- stage ---------- */
+.stage{display:grid;grid-template-columns:minmax(170px,210px) minmax(0,560px) minmax(270px,320px);gap:22px;justify-content:center;align-items:start}
+.hud{display:flex;flex-direction:column;gap:14px}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:14px}
+.lbl{font:400 11px var(--pixel);letter-spacing:.08em;color:var(--muted);text-transform:uppercase}
+
+.stats{display:grid;grid-template-columns:1fr;gap:10px;margin:0}
+.stat{display:flex;justify-content:space-between;align-items:baseline;gap:8px;border-bottom:1px dashed var(--line);padding-bottom:8px}
+.stat:last-child{border-bottom:0;padding-bottom:0}
+.stat dd{margin:0;font:600 18px var(--mono);font-variant-numeric:tabular-nums}
+.stat dd.lvl{font:700 20px var(--pixel);color:var(--p)}
+.stat dd.tgt{font:700 20px var(--mono);color:var(--d)}
+.pips{display:flex;gap:6px}
+.pip{width:20px;height:20px;display:block}
+.pip.lost{opacity:.22;filter:grayscale(1)}
+.px{display:block;width:100%;height:100%;image-rendering:pixelated;shape-rendering:crispEdges}
+
+.keys{display:grid;grid-template-columns:auto 1fr;gap:7px 10px;align-items:center;font-size:12.5px;margin:10px 0 0}
+kbd{display:inline-block;min-width:24px;text-align:center;padding:2px 6px;font:600 11px var(--mono);background:var(--panel2);border:1px solid var(--line);border-bottom-width:3px;border-radius:3px;color:var(--text)}
+.toggles{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.tbtn{background:var(--panel2);border:1px solid var(--line);border-radius:3px;padding:5px 9px;font:400 11px var(--pixel);cursor:pointer;letter-spacing:.05em}
+.tbtn[aria-pressed="true"]{background:var(--p);color:var(--ink);border-color:var(--p)}
+
+/* ---------- playfield ---------- */
+.play{display:flex;flex-direction:column;gap:10px;min-width:0}
+.toast{min-height:64px;display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:4px;background:var(--panel);border:1px solid var(--line);font-size:13px}
+.toast::before{content:"";flex:none;width:8px;height:8px;border-radius:1px;background:var(--muted);margin-top:5px}
+.toast .msg{flex:1;min-width:0;line-height:1.55;text-wrap:pretty}
+.toast .pts{font-weight:700;white-space:nowrap}
+.toast.good::before{background:var(--f)} .toast.bad{border-color:var(--bad)} .toast.bad::before{background:var(--bad)}
+.toast.gold{border-color:var(--p)} .toast.gold::before{background:var(--p)}
+.toast b{font-weight:600}
+
+.frame{padding:6px;background:#080a13;border:2px solid var(--line);border-radius:6px;box-shadow:0 0 0 4px var(--panel),0 18px 40px rgba(0,0,0,.45)}
+.screen{position:relative;width:100%;max-width:max(300px,calc((100dvh - 210px) * .75));aspect-ratio:3/4;margin:0 auto;overflow:hidden}
+.screen canvas{display:block;width:100%;height:100%;touch-action:none}
+.screen.shake{animation:shake .32s}
+@keyframes shake{20%{transform:translateX(-6px)}40%{transform:translateX(5px)}60%{transform:translateX(-4px)}80%{transform:translateX(2px)}}
+
+.card{position:absolute;inset:0;z-index:5;display:grid;place-items:center;padding:12px;background:rgba(8,10,19,.8);backdrop-filter:blur(2px)}
+.card .inner{max-width:400px;width:100%;background:var(--panel);border:2px solid var(--line);border-radius:6px;padding:18px 20px;display:flex;flex-direction:column;gap:10px;max-height:100%;overflow:auto}
+.card h2{margin:0;font:700 clamp(16px,3vw,24px)/1.1 var(--pixel);color:var(--p);text-wrap:balance}
+.card p{margin:0;font-size:13px;text-wrap:pretty}
+.card ul{margin:0;padding-left:18px;font-size:12.5px;display:flex;flex-direction:column;gap:4px}
+.card .rule{font:600 12.5px var(--mono);background:var(--panel2);border:1px solid var(--line);border-radius:3px;padding:8px 10px}
+.go{align-self:flex-start;background:var(--p);color:var(--ink);border:0;border-radius:3px;padding:10px 16px;font:700 14px var(--pixel);letter-spacing:.05em;cursor:pointer;
+  box-shadow:inset 0 3px 0 rgba(255,255,255,.4),inset 0 -4px 0 rgba(0,0,0,.25)}
+.go:hover{filter:brightness(1.08)}
+
+.pad{display:none;grid-template-columns:1fr 1.6fr 1fr;gap:8px}
+.pad button{background:var(--panel2);border:1px solid var(--line);border-bottom-width:4px;border-radius:5px;padding:14px 0;font:700 16px var(--pixel);cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none}
+.pad button.fireb{background:var(--p);color:var(--ink);border-color:#b98a1a}
+@media (pointer:coarse),(max-width:1020px){.pad{display:grid}}
+
+/* ---------- right panel ---------- */
+.eqs{margin:10px 0 0;display:flex;flex-direction:column;gap:6px;font:600 clamp(17px,2vw,21px)/1.3 var(--mono);font-variant-numeric:tabular-nums}
+.eqs div{display:flex;gap:10px;align-items:baseline}
+.eqs small{font:500 11px var(--mono);color:var(--muted);width:14px;flex:none}
+.std{margin-top:10px;padding:8px 10px;background:var(--panel2);border:1px dashed var(--line);border-radius:3px;font-size:12.5px;display:none}
+.std b{color:var(--p);font-weight:600}
+body.hint .std{display:block}
+.sysq{display:flex;gap:4px;margin-top:12px}
+.sysq i{flex:1;height:10px;border-radius:1px;background:var(--panel2);border:1px solid var(--line)}
+.sysq i.done{background:var(--f);border-color:var(--f)}
+.sysq i.now{border-color:var(--p)}
+
+.det{display:flex;align-items:center;gap:10px;margin-top:10px;font:600 16px var(--mono)}
+.det .dl{min-width:48px;text-align:right}
+.mat{display:grid;grid-template-columns:auto auto;gap:2px 14px;padding:3px 9px;border-left:3px solid var(--text);border-right:3px solid var(--text)}
+.mat i{font-style:normal;text-align:center}
+.mat i.k{color:var(--p)}
+.tplan{display:none}
+body.hint .tplan{display:flex}
+.note{font-size:12px;color:var(--muted);margin:10px 0 0;text-wrap:pretty}
+.note b{color:var(--text);font-weight:600}
+
+#bossPanel{display:none}
+body.boss #bossPanel{display:block}
+body.boss #sysBox,body.boss #targetBox{display:none}
+.bossrules{margin:12px 0 0;padding-left:17px;font-size:12.5px;line-height:1.5;color:var(--muted);display:flex;flex-direction:column;gap:7px}
+.bossrules b{color:var(--text);font-weight:600}
+.bossstat{display:flex;gap:18px;margin-top:12px}
+.bossstat div{display:flex;flex-direction:column}
+.bossstat b{font:700 22px var(--mono)}
+
+/* ---------- responsive ---------- */
+@media (max-width:1020px){
+  .stage{grid-template-columns:minmax(0,560px)}
+  .play{order:-1}
+  .hud.left .stats{grid-template-columns:repeat(3,1fr)}
+  .hud.left .stat{flex-direction:column;align-items:flex-start;border-bottom:0;padding-bottom:0}
+  .keysbox{display:none}
+  .screen{max-width:100%}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+</style>
+
+<div class="app">
+  <header class="top">
+    <div class="logo" aria-hidden="true"><div class="m"><span>a</span><span>b</span><span>c</span><span>d</span></div></div>
+    <div>
+      <h1><span class="a">Cramer's</span> <span class="b">Galaxy</span></h1>
+      <p class="tag">Shoot each coefficient while it flies through its cell of the determinant. <b>D</b> uses the x and y coefficients; <b>N<sub>x</sub></b> and <b>N<sub>y</sub></b> swap a column for the constants.</p>
+    </div>
+  </header>
+
+  <main class="stage">
+    <aside class="hud left">
+      <div class="box">
+        <dl class="stats">
+          <div class="stat"><dt class="lbl">Level</dt><dd class="lvl" id="hLevel">1</dd></div>
+          <div class="stat"><dt class="lbl">Target</dt><dd class="tgt" id="hTarget">D</dd></div>
+          <div class="stat"><dt class="lbl">Score</dt><dd id="hScore">0</dd></div>
+          <div class="stat"><dt class="lbl">Best</dt><dd id="hBest">0</dd></div>
+          <div class="stat"><dt class="lbl">Ships</dt><dd class="pips" id="hLives"></dd></div>
+          <div class="stat"><dt class="lbl">Streak</dt><dd id="hStreak">0</dd></div>
+        </dl>
+      </div>
+      <div class="box keysbox">
+        <div class="lbl">Controls</div>
+        <div class="keys">
+          <span><kbd>←</kbd> <kbd>→</kbd></span><span>Move ship</span>
+          <span><kbd>Space</kbd></span><span>Fire</span>
+          <span><kbd>P</kbd></span><span>Pause</span>
+          <span><kbd>H</kbd></span><span>Hints</span>
+          <span><kbd>M</kbd></span><span>Sound</span>
+        </div>
+        <div class="toggles">
+          <button class="tbtn" id="hintBtn" aria-pressed="false">Hints</button>
+          <button class="tbtn" id="muteBtn" aria-pressed="false">Mute</button>
+        </div>
+      </div>
+    </aside>
+
+    <section class="play">
+      <div class="toast" id="toast" role="status" aria-live="polite"><span class="msg">Press Space to launch.</span></div>
+      <div class="frame">
+        <div class="screen" id="screen">
+          <canvas id="cv" aria-label="Game field"></canvas>
+          <div class="card" id="card" hidden></div>
+        </div>
+      </div>
+      <div class="pad" aria-label="Touch controls">
+        <button data-k="left" aria-label="Move left">◀</button>
+        <button data-k="fire" class="fireb">FIRE</button>
+        <button data-k="right" aria-label="Move right">▶</button>
+      </div>
+    </section>
+
+    <aside class="hud right">
+      <div class="box" id="sysBox">
+        <div class="lbl" id="sysLbl">System 1 of 3</div>
+        <div class="eqs" id="eqs"></div>
+        <div class="std" id="std"></div>
+        <div class="sysq" id="sysq" aria-hidden="true"></div>
+      </div>
+      <div class="box" id="targetBox">
+        <div class="lbl">Cramer's rule</div>
+        <div class="det"><span class="dl">D =</span><div class="mat"><i>a₁</i><i>b₁</i><i>a₂</i><i>b₂</i></div></div>
+        <div class="det tplan" id="tplan"></div>
+        <p class="note" id="tnote"></p>
+        <p class="note">For <b>a₁x + b₁y = c₁</b> and <b>a₂x + b₂y = c₂</b>: x = N<sub>x</sub> / D and y = N<sub>y</sub> / D.</p>
+      </div>
+      <div class="box" id="bossPanel">
+        <div class="lbl">Boss &middot; The Determinator</div>
+        <div class="bossstat">
+          <div><span class="lbl">Solved</span><b id="bCount">0</b></div>
+          <div><span class="lbl">Boss best</span><b id="bBest">0</b></div>
+        </div>
+        <ul class="bossrules">
+          <li><b>Evaluate the determinant</b> at the top: <b>ad − bc</b>, the down-diagonal product minus the up-diagonal product.</li>
+          <li><b>Shoot its value.</b> A new determinant appears right away.</li>
+          <li><b>One wrong shot</b> ends the round. Your ships are safe here.</li>
+          <li>Solve 5 or more to win a ship back.</li>
+        </ul>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<script>
+(() => {
+// ---------- constants ----------
+const W = 480, H = 640;
+const C = { ground:'#0b0d18', panel:'#131728', panel2:'#1a1f35', line:'#2a3152', text:'#e4e9ff', muted:'#8a93b8',
+            pink:'#ff5a74', gold:'#ffc53d', blue:'#3fb8ff', green:'#6fe08a', bad:'#ff3b3b', white:'#f2f5ff', ink:'#0b0d18' };
+const PIX = '"Silkscreen","Courier New",monospace', MONO = '"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace';
+const MINUS = '−';
+
+// the determinant frame: four cells, top-left, top-right, bottom-left, bottom-right
+const CW = 104, CH = 82, GAP = 16;
+const FX = W / 2 - CW - GAP / 2, FY = 120;
+const CELLS = [0,1,2,3].map(k => ({ x: FX + (k % 2) * (CW + GAP), y: FY + (k >> 1) * (CH + GAP), w: CW, h: CH }));
+const FRAME = { x: FX - 16, y: FY - 10, w: 2 * CW + GAP + 32, h: 2 * CH + GAP + 20 };
+const CELL_NAME = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];
+const SHIP_Y = 596, BUG_R = 24;
+
+const ROLE = { a1:'a₁', b1:'b₁', c1:'c₁', a2:'a₂', b2:'b₂', c2:'c₂' };
+const ROLE_DESC = {
+  a1:'the x-coefficient of equation 1', b1:'the y-coefficient of equation 1', c1:'the constant of equation 1',
+  a2:'the x-coefficient of equation 2', b2:'the y-coefficient of equation 2', c2:'the constant of equation 2' };
+const TARGETS = {
+  D:  { roles:['a1','b1','a2','b2'], html:'D', rule:'<b>D</b> uses the x-coefficients in the left column and the y-coefficients in the right. The constants never go in D.' },
+  Nx: { roles:['c1','b1','c2','b2'], html:'N<sub>x</sub>', rule:'<b>N<sub>x</sub></b> is D with the <b>x column</b> replaced by the constants.' },
+  Ny: { roles:['a1','c1','a2','c2'], html:'N<sub>y</sub>', rule:'<b>N<sub>y</sub></b> is D with the <b>y column</b> replaced by the constants.' }
+};
+const ORDER = ['D', 'Nx', 'Ny'];
+const TIER_TXT = ['',
+  'Small positive numbers in standard form.',
+  'Negative numbers join the swarm.',
+  'Terms out of order. Check which number goes with x and which with y.',
+  'Equations out of standard form, and missing terms (a coefficient of 0).'];
+const SYSTEMS_PER_LEVEL = 3, BOSS_TIME = 15;
+
+// ---------- helpers ----------
+const rand = (a, b) => a + Math.random() * (b - a);
+const ri = (a, b) => Math.floor(rand(a, b + 1));
+const nz = (a, b) => { let v = 0; while (!v) v = ri(a, b); return v; };
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const dist = (p, q) => Math.hypot(p.x - q.x, p.y - q.y);
+const fmt = n => n < 0 ? MINUS + (-n) : '' + n;
+const par = n => n < 0 ? '(' + fmt(n) + ')' : '' + n;
+const tierOf = lvl => Math.min(4, Math.ceil(lvl / 3));
+const targetOf = lvl => ORDER[(lvl - 1) % 3];
+const subHTML = t => TARGETS[t].html;
+// "3·4 − (−2)·5 = 22" for the matrix [p q; r s]
+const working = (p, q, r, s) => `${fmt(p)}·${par(s)} ${MINUS} ${par(q)}·${par(r)} = ${fmt(p * s - q * r)}`;
+
+// ---------- equations ----------
+function term(c, v, first){
+  const a = Math.abs(c), body = v ? (a === 1 ? '' : a) + v : '' + a;
+  if (first) return (c < 0 ? MINUS : '') + body;
+  return (c < 0 ? ' ' + MINUS + ' ' : ' + ') + body;
+}
+function side(ts){
+  const t = ts.filter(q => q.c !== 0);
+  return t.length ? t.map((q, i) => term(q.c, q.v, i === 0)).join('') : '0';
+}
+function eqText(a, b, c, form){
+  const X = { c:a, v:'x' }, Y = { c:b, v:'y' }, K = { c, v:'' }, neg = q => ({ c:-q.c, v:q.v });
+  switch (form){
+    case 'yx':    return side([Y, X]) + ' = ' + side([K]);
+    case 'flip':  return side([K]) + ' = ' + side([X, Y]);
+    case 'movey': return side([X]) + ' = ' + side([K, neg(Y)]);
+    case 'movex': return side([Y]) + ' = ' + side([K, neg(X)]);
+    case 'movec': return side([X, Y, neg(K)]) + ' = 0';
+    default:      return side([X, Y]) + ' = ' + side([K]);
+  }
+}
+function formsFor(tier, a1, b1, a2, b2){
+  if (tier <= 2) return ['std', 'std'];
+  const ok = (f, a, b) => !((f === 'movey' || f === 'movec') && !a) && !((f === 'movex' || f === 'movec') && !b) && !(f === 'movey' && !b) && !(f === 'movex' && !a);
+  const pool = tier === 3 ? ['std', 'yx', 'flip'] : ['std', 'yx', 'flip', 'movey', 'movex', 'movec'];
+  const hard = tier === 3 ? ['yx', 'flip'] : ['movey', 'movex', 'movec'];
+  for (let t = 0; t < 50; t++){
+    const f = [pick(pool), pick(pool)];
+    if (!ok(f[0], a1, b1) || !ok(f[1], a2, b2)) continue;
+    if (!f.some(x => hard.includes(x))) continue;
+    return f;
+  }
+  return ['std', 'yx'];
+}
+function makeSystem(tier){
+  for (let t = 0; t < 2000; t++){
+    let a1, b1, a2, b2, x, y;
+    if (tier === 1){ a1 = ri(1,6); b1 = ri(1,6); a2 = ri(1,6); b2 = ri(1,6); x = ri(1,4); y = ri(1,4); }
+    else { a1 = nz(-7,7); b1 = nz(-7,7); a2 = nz(-7,7); b2 = nz(-7,7); x = ri(-4,4); y = ri(-4,4); }
+    if (tier === 4 && Math.random() < .45){ const z = ri(0,3); if (z === 0) a1 = 0; else if (z === 1) b1 = 0; else if (z === 2) a2 = 0; else b2 = 0; }
+    const c1 = a1 * x + b1 * y, c2 = a2 * x + b2 * y, D = a1 * b2 - b1 * a2;
+    if (!D) continue;
+    const vals = [a1, b1, c1, a2, b2, c2];
+    if (vals.some(v => Math.abs(v) > 40)) continue;
+    if (tier === 1 && new Set(vals).size < 6) continue;
+    if (tier >= 2 && !vals.some(v => v < 0)) continue;
+    if (tier >= 2 && new Set(vals).size < 5) continue;
+    return { a1, b1, c1, a2, b2, c2, x, y, D, forms: formsFor(tier, a1, b1, a2, b2) };
+  }
+  return { a1:2, b1:1, c1:5, a2:1, b2:3, c2:5, x:2, y:1, D:5, forms:['std','std'] };
+}
+
+// ---------- boss problems ----------
+function bossProblem(lvl){
+  const R = lvl < 2 ? 6 : lvl < 4 ? 9 : 12;
+  let a, b, c, d;
+  do {
+    if (lvl < 2){ a = ri(1,R); b = ri(1,R); c = ri(1,R); d = ri(1,R); }
+    else { a = nz(-R,R); b = nz(-R,R); c = nz(-R,R); d = nz(-R,R); }
+  } while (a * d - b * c === 0 && Math.random() < .8);
+  const ans = a * d - b * c;
+  const wrong = [
+    [a*d + b*c, 'added the two diagonal products (ad + bc) instead of subtracting'],
+    [b*c - a*d, 'subtracted in the wrong order (bc − ad)'],
+    [a*b - c*d, 'multiplied across the rows (ab − cd) instead of along the diagonals'],
+    [a*c - b*d, 'multiplied down the columns (ac − bd) instead of along the diagonals'],
+    [a*d,       'used only the down-diagonal product (ad) and forgot to subtract bc'],
+    [-a*d - b*c,'lost a sign: that is −ad − bc']
+  ];
+  const seen = new Set([ans]), opts = [{ v:ans, ok:true }];
+  for (const [v, why] of shuffle(wrong)){
+    if (opts.length >= 6) break;
+    if (!seen.has(v)){ seen.add(v); opts.push({ v, ok:false, why }); }
+  }
+  let guard = 0;
+  while (opts.length < 6 && guard++ < 200){
+    const v = ans + nz(-10, 10);
+    if (!seen.has(v)){ seen.add(v); opts.push({ v, ok:false, why:null }); }
+  }
+  return { a, b, c, d, ans, opts };
+}
+
+// ---------- pixel sprites ----------
+const SHIP_MAP = [
+  "......w......","......w......",".....www.....",".....www.....","..r..www..r..","..r.wwwww.r..",
+  "..wwwbwbwww..","r.wwbbwbbww.r","r.wwwwwwwww.r","w.wwwrwrwww.w","wwwwrrwrrwwww","www.rr.rr.www","ww.........ww"];
+const SHIP_COL = { w:'#e8ecff', r:'#ff5a74', b:'#3fb8ff' };
+const BUG_MAPS = [
+  ["..a.....a..","...a...a...","..bbbbbbb..",".bbwbbbwbb.","bbbbbbbbbbb","b.bbbbbbb.b","b.b.....b.b","...bb.bb..."],
+  ["..a.....a..","b..a...a..b","b.bbbbbbb.b","bbbwbbbwbbb","bbbbbbbbbbb","..bbbbbbb..","..b.....b..",".b.......b."]
+];
+const BUG_PAL = [
+  { a:'#ffc53d', b:'#3fb8ff', w:'#ffffff' },
+  { a:'#ff5a74', b:'#6fe08a', w:'#0b0d18' },
+  { a:'#3fb8ff', b:'#ffc53d', w:'#0b0d18' }
+];
+const BOSS_PAL = { a:'#ffc53d', b:'#ff5a74', w:'#ffffff' };
+function drawMap(map, pal, x, y, s){
+  for (let r = 0; r < map.length; r++) for (let c = 0; c < map[r].length; c++){
+    const ch = map[r][c]; if (ch === '.') continue;
+    ctx.fillStyle = pal[ch]; ctx.fillRect(x + c * s, y + r * s, s, s);
+  }
+}
+function svgSprite(map, pal){
+  let r = '';
+  map.forEach((row, y) => [...row].forEach((ch, x) => { if (ch !== '.') r += `<rect x="${x}" y="${y}" width="1" height="1" fill="${pal[ch]}"/>`; }));
+  return `<svg class="px" viewBox="0 0 ${map[0].length} ${map.length}" aria-hidden="true">${r}</svg>`;
+}
+
+// ---------- state ----------
+const S = { mode:'title', level:1, score:0, best:0, lives:3, streak:0, hint:false, muted:false, pausedFrom:'play',
+            sysIndex:0, sys:null, target:'D', filled:[null,null,null,null], banner:null, bossBest:0 };
+try {
+  S.best = +localStorage.getItem('cg-best') || 0;
+  S.bossBest = +localStorage.getItem('cg-boss-best') || 0;
+  S.muted = localStorage.getItem('cg-muted') === '1';
+  S.hint = localStorage.getItem('cg-hint') === '1';
+} catch {}
+
+let ship = { x: W / 2, inv: 0 }, bullets = [], bugs = [], parts = [], claims = [null,null,null,null], cellFx = [null,null,null,null];
+let boss = null;                 // { t, count, prob, nums }
+let held = { left:false, right:false }, cardAt = 0;
+
+// ---------- DOM ----------
+const $ = id => document.getElementById(id);
+const cv = $('cv'), ctx = cv.getContext('2d'), screen = $('screen'), card = $('card'), toast = $('toast');
+let scale = 1;
+function fitCanvas(){
+  const r = screen.getBoundingClientRect();
+  if (!r.width) return;
+  const dpr = Math.min(3, window.devicePixelRatio || 1);
+  cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr);
+  scale = cv.width / W;
+  ctx.setTransform(scale, 0, 0, scale, 0, 0);
+  ctx.imageSmoothingEnabled = false;
+}
+
+// ---------- sound ----------
+let actx = null;
+function tone(freq, dur = .08, type = 'square', vol = .045, slide = 0){
+  if (S.muted) return;
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    const t0 = actx.currentTime, o = actx.createOscillator(), g = actx.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, t0);
+    if (slide) o.frequency.exponentialRampToValueAtTime(freq * slide, t0 + dur);
+    g.gain.setValueAtTime(vol, t0); g.gain.exponentialRampToValueAtTime(.0001, t0 + dur);
+    o.connect(g).connect(actx.destination); o.start(t0); o.stop(t0 + dur + .02);
+  } catch {}
+}
+const arpeggio = (notes, gap = 70) => notes.forEach((f, i) => setTimeout(() => tone(f, .12, 'square', .04), i * gap));
+
+// ---------- HUD ----------
+function say(html, kind = ''){ toast.className = 'toast' + (kind ? ' ' + kind : ''); toast.innerHTML = `<span class="msg">${html}</span>`; }
+function showCard(html){ card.innerHTML = `<div class="inner">${html}</div>`; card.hidden = false; cardAt = performance.now(); const b = card.querySelector('.go'); if (b) b.focus({ preventScroll:true }); }
+function hideCard(){ card.hidden = true; card.innerHTML = ''; }
+const bossish = () => ['bossintro','boss','bossclear'].includes(S.mode) || (S.mode === 'paused' && S.pausedFrom === 'boss');
+const shipPip = svgSprite(SHIP_MAP, SHIP_COL);
+function renderHUD(){
+  document.body.classList.toggle('boss', bossish());
+  document.body.classList.toggle('hint', S.hint);
+  $('hLevel').textContent = S.level;
+  $('hTarget').innerHTML = subHTML(S.target);
+  $('hScore').textContent = S.score.toLocaleString();
+  $('hBest').textContent = S.best.toLocaleString();
+  $('hStreak').textContent = S.streak;
+  $('hLives').innerHTML = [0,1,2].map(i => `<span class="pip${i < S.lives ? '' : ' lost'}">${shipPip}</span>`).join('');
+  $('hLives').setAttribute('aria-label', S.lives + ' of 3');
+  $('hintBtn').setAttribute('aria-pressed', S.hint);
+  $('muteBtn').setAttribute('aria-pressed', S.muted);
+  const s = S.sys;
+  $('sysLbl').textContent = `System ${S.sysIndex + 1} of ${SYSTEMS_PER_LEVEL}`;
+  $('eqs').innerHTML = s ? `<div><small>1</small>${eqText(s.a1, s.b1, s.c1, s.forms[0])}</div><div><small>2</small>${eqText(s.a2, s.b2, s.c2, s.forms[1])}</div>` : '';
+  $('std').innerHTML = s ? `Standard form:<br><b>a₁</b> = ${fmt(s.a1)}, <b>b₁</b> = ${fmt(s.b1)}, <b>c₁</b> = ${fmt(s.c1)}<br><b>a₂</b> = ${fmt(s.a2)}, <b>b₂</b> = ${fmt(s.b2)}, <b>c₂</b> = ${fmt(s.c2)}` : '';
+  $('sysq').innerHTML = Array.from({ length: SYSTEMS_PER_LEVEL }, (_, i) => `<i class="${i < S.sysIndex ? 'done' : i === S.sysIndex ? 'now' : ''}"></i>`).join('');
+  const T = TARGETS[S.target];
+  $('tnote').innerHTML = T.rule;
+  $('tplan').innerHTML = S.target === 'D' ? '' : `<span class="dl">${T.html} =</span><div class="mat">${T.roles.map(r => `<i class="${r[0] === 'c' ? 'k' : ''}">${ROLE[r]}</i>`).join('')}</div>`;
+  $('tplan').style.visibility = S.target === 'D' ? 'hidden' : '';
+  $('bCount').textContent = boss ? boss.count : 0;
+  $('bBest').textContent = S.bossBest;
+}
+function saveBest(){ if (S.score > S.best){ S.best = S.score; try { localStorage.setItem('cg-best', S.best); } catch {} } }
+function shake(){ screen.classList.remove('shake'); void screen.offsetWidth; screen.classList.add('shake'); setTimeout(() => screen.classList.remove('shake'), 340); }
+
+// ---------- stars ----------
+const stars = Array.from({ length: 80 }, () => ({ x: rand(0, W), y: rand(0, H), sp: rand(12, 60), c: pick(['#8a93b8','#3fb8ff','#ffc53d','#ff5a74','#e4e9ff']), ph: rand(0, 6) }));
+
+// ---------- bugs: flight planning ----------
+const need = k => S.sys[TARGETS[S.target].roles[k]];
+const swoopSpeed = () => Math.min(430, 230 + 18 * (S.level - 1));
+const driftSpeed = () => Math.min(150, 52 * Math.pow(1.1, S.level - 1));
+const diveChance = () => S.level >= 4 ? Math.min(.4, .15 + .04 * (S.level - 4)) : 0;
+const rndField = () => ({ x: rand(40, W - 40), y: rand(40, 420) });
+function offPoint(){
+  const e = Math.random();
+  if (e < .4) return { x: rand(40, W - 40), y: -40 };
+  if (e < .7) return { x: -40, y: rand(30, 340) };
+  return { x: W + 40, y: rand(30, 340) };
+}
+function bez(p0, p1, p2, p3, speed){
+  const len = (dist(p0,p1) + dist(p1,p2) + dist(p2,p3) + dist(p0,p3)) / 2;
+  return { type:'bez', p0, p1, p2, p3, dur: Math.max(.25, len / speed) };
+}
+const line = (p0, p1, speed) => ({ type:'line', p0, p1, dur: Math.max(.2, dist(p0, p1) / speed) });
+const wait = (dur, onEnd) => ({ type:'wait', dur, onEnd });
+function loopSeg(at, speed){
+  const r = 36, ang = rand(0, Math.PI * 2), c = { x: at.x + Math.cos(ang) * r, y: at.y + Math.sin(ang) * r };
+  return { type:'loop', c, r, a0: Math.atan2(at.y - c.y, at.x - c.x), dir: Math.random() < .5 ? 1 : -1, dur: 2 * Math.PI * r / speed };
+}
+function segPos(s, u){
+  if (s.type === 'bez'){
+    const m = 1 - u, A = m*m*m, B = 3*m*m*u, Cc = 3*m*u*u, Dd = u*u*u;
+    return { x: A*s.p0.x + B*s.p1.x + Cc*s.p2.x + Dd*s.p3.x, y: A*s.p0.y + B*s.p1.y + Cc*s.p2.y + Dd*s.p3.y };
+  }
+  if (s.type === 'line') return { x: s.p0.x + (s.p1.x - s.p0.x) * u, y: s.p0.y + (s.p1.y - s.p0.y) * u };
+  if (s.type === 'loop'){ const a = s.a0 + s.dir * u * Math.PI * 2; return { x: s.c.x + Math.cos(a) * s.r, y: s.c.y + Math.sin(a) * s.r }; }
+  return null;
+}
+function release(b){ if (b.claim !== null && claims[b.claim] === b) claims[b.claim] = null; b.claim = null; }
+function chooseCell(b){
+  const free = [0,1,2,3].filter(k => S.filled[k] === null && !claims[k]);
+  if (!free.length) return null;
+  const home = free.filter(k => need(k) === b.v);
+  if (home.length && Math.random() < .5) return pick(home);
+  return Math.random() < .88 ? pick(free) : null;
+}
+function plan(b){
+  const sw = swoopSpeed(), P = { x: b.x, y: b.y };
+  const k = chooseCell(b);
+  if (k === null){
+    b.segs.push(bez(P, rndField(), rndField(), offPoint(), sw), wait(rand(.3, 1.1)));
+    return;
+  }
+  b.claim = k; claims[k] = b;
+  const c = CELLS[k], cx = c.x + c.w / 2, cy = c.y + c.h / 2;
+  const vert = Math.random() < .3, sg = Math.random() < .5 ? 1 : -1;
+  const dir = vert ? { x:0, y:sg } : { x:sg, y:0 };
+  const half = (vert ? c.h : c.w) / 2 + 14;
+  const A = { x: cx - dir.x * half, y: cy - dir.y * half }, B = { x: cx + dir.x * half, y: cy + dir.y * half };
+  b.segs.push(bez(P, rndField(), { x: A.x - dir.x * 90, y: A.y - dir.y * 90 }, A, sw));
+  const drift = line(A, B, driftSpeed());
+  drift.onEnd = () => release(b);
+  b.segs.push(drift);
+  if (Math.random() < .35) b.segs.push(loopSeg(B, sw * .8));
+  const out = { x: B.x + dir.x * 110, y: B.y + dir.y * 110 };
+  if (Math.random() < diveChance()){
+    const dv = bez(B, out, { x: ship.x, y: 500 }, { x: ship.x, y: H + 50 }, sw * 1.1);
+    dv.onStart = () => { dv.p2 = { x: ship.x, y: 520 }; dv.p3 = { x: ship.x + rand(-50, 50), y: H + 50 }; };
+    dv.dive = true;
+    b.segs.push(dv, wait(rand(.4, 1.2), () => { const o = offPoint(); b.x = o.x; b.y = o.y; }));
+  } else {
+    b.segs.push(bez(B, out, rndField(), offPoint(), sw), wait(rand(.3, 1.3)));
+  }
+}
+function stepBug(b, dt){
+  if (b.dead > 0){
+    b.dead -= dt;
+    if (b.dead > 0) return;
+    const o = offPoint(); b.x = o.x; b.y = o.y; b.segs = []; b.seg = null; b.hidden = true;
+  }
+  let rem = dt, guard = 0;
+  while (rem > 1e-6 && guard++ < 20){
+    if (!b.seg){
+      if (!b.segs.length) plan(b);
+      b.seg = b.segs.shift(); b.seg.t = 0;
+      if (b.seg.p0 && b.seg.type === 'bez') b.seg.p0 = { x: b.x, y: b.y };
+      if (b.seg.onStart) b.seg.onStart();
+    }
+    const s = b.seg, use = Math.min(s.dur - s.t, rem);
+    s.t += use; rem -= use;
+    const p = segPos(s, Math.min(1, s.t / s.dur));
+    if (p){ b.x = p.x; b.y = p.y; b.hidden = false; } else b.hidden = true;
+    b.diving = !!s.dive;
+    if (s.t >= s.dur - 1e-9){ b.seg = null; if (s.onEnd) s.onEnd(); }
+  }
+}
+function cellAt(x, y){
+  for (let k = 0; k < 4; k++){ const c = CELLS[k]; if (x >= c.x && x <= c.x + c.w && y >= c.y && y <= c.y + c.h) return k; }
+  return null;
+}
+function killBug(b, delay){
+  release(b); b.dead = delay; b.hidden = true; b.seg = null; b.segs = [];
+}
+
+// ---------- particles ----------
+function burst(x, y, color, n = 16, sp = 160){
+  for (let i = 0; i < n; i++){
+    const a = rand(0, Math.PI * 2), v = rand(sp * .3, sp);
+    parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: rand(.35, .7), max: .7, c: color });
+  }
+}
+
+// ---------- main game flow ----------
+function startSystem(){
+  S.target = targetOf(S.level);
+  S.sys = makeSystem(tierOf(S.level));
+  S.filled = [null,null,null,null]; S.banner = null;
+  claims = [null,null,null,null]; cellFx = [null,null,null,null]; bullets = [];
+  const roles = shuffle(['a1','b1','c1','a2','b2','c2']);
+  bugs = roles.map((r, i) => {
+    const o = offPoint();
+    return { role:r, v:S.sys[r], x:o.x, y:o.y, segs:[wait(.4 + i * .55)], seg:null, dead:0, hidden:true, claim:null,
+             pal: BUG_PAL[i % BUG_PAL.length], map: i % 2, ph: rand(0, 6) };
+  });
+  renderHUD();
+}
+function start(){
+  Object.assign(S, { level:1, score:0, lives:3, streak:0, sysIndex:0 });
+  boss = null; ship.x = W / 2; ship.inv = 0; parts = [];
+  startSystem(); S.mode = 'play'; hideCard();
+  say(`<b>Level 1: build D.</b> Shoot each coefficient while it drifts through its cell of the determinant. The constants don't belong in D.`, 'gold');
+  arpeggio([262,330,392,523]); renderHUD();
+}
+function hit(b){
+  const k = cellAt(b.x, b.y);
+  if (k === null){
+    S.score = Math.max(0, S.score - 5); S.streak = 0;
+    burst(b.x, b.y, C.muted, 10, 120); killBug(b, 1.0);
+    tone(220, .08, 'triangle', .03, .5);
+    say(`Shot down <b>${fmt(b.v)}</b> outside the determinant. It'll be back. Hit coefficients while they're <b>inside</b> a cell. <span class="pts" style="color:var(--bad)">−5</span>`);
+    renderHUD(); return;
+  }
+  const T = TARGETS[S.target], nr = T.roles[k], nv = need(k);
+  if (b.v === nv){
+    S.filled[k] = b.v; S.streak++;
+    const pts = 10 * S.level + Math.min(S.streak, 20) * S.level;
+    S.score += pts; saveBest();
+    release(b); bugs = bugs.filter(x => x !== b);
+    cellFx[k] = { c: C.green, t: .5 };
+    burst(b.x, b.y, C.green, 14, 140);
+    tone(523 + 80 * S.filled.filter(v => v !== null).length, .09, 'square', .045, 1.5);
+    const same = b.role === nr ? `<b>${fmt(b.v)}</b> is ${ROLE[nr]}, ${ROLE_DESC[nr]}.` : `<b>${fmt(b.v)}</b> has the same value as ${ROLE[nr]}, ${ROLE_DESC[nr]}.`;
+    say(`${same} Locked into the ${CELL_NAME[k]} cell of ${T.html}. <span class="pts" style="color:var(--p)">+${pts}</span>`, 'good');
+    if (S.filled.every(v => v !== null)) completeSystem();
+    renderHUD(); return;
+  }
+  // wrong cell
+  const r = b.role, T2 = S.target, isDecoy = !T.roles.includes(r);
+  let msg;
+  if (isDecoy){
+    msg = T2 === 'D'
+      ? `<b>${fmt(b.v)}</b> is ${ROLE[r]}, ${ROLE_DESC[r]}. D is built only from the x and y coefficients, so the constants never go in it.`
+      : `<b>${fmt(b.v)}</b> is ${ROLE[r]}, ${ROLE_DESC[r]}. In ${T.html} the ${T2 === 'Nx' ? 'x' : 'y'} column is replaced by the constants, so the ${T2 === 'Nx' ? 'x' : 'y'}-coefficients drop out.`;
+  } else {
+    const homes = [0,1,2,3].filter(j => S.filled[j] === null && need(j) === b.v);
+    const where = homes.length ? `It belongs in the ${homes.map(j => CELL_NAME[j]).join(' or ')} cell.` : `Every cell that needs ${fmt(b.v)} is already filled.`;
+    msg = `<b>${fmt(b.v)}</b> is ${ROLE[r]}, ${ROLE_DESC[r]}. ${where} The ${CELL_NAME[k]} cell holds ${ROLE[nr]} = ${fmt(nv)}.`;
+    homes.forEach(j => cellFx[j] = { c: C.gold, t: 1.4, blink: true });
+  }
+  if (!cellFx[k] || !cellFx[k].blink) cellFx[k] = { c: C.bad, t: .9 };
+  burst(b.x, b.y, C.bad, 18, 170); killBug(b, 1.2);
+  loseShip(msg);
+}
+function loseShip(msg){
+  S.lives--; S.streak = 0; ship.inv = 1.6;
+  tone(110, .25, 'sawtooth', .06, .5); shake();
+  say(msg, 'bad');
+  if (S.lives <= 0){
+    S.mode = 'over'; saveBest(); renderHUD();
+    burst(ship.x, SHIP_Y, C.pink, 30, 220);
+    cardAt = performance.now() + 700;
+    setTimeout(() => S.mode === 'over' && showCard(`<h2>Game over</h2><p>${msg}</p>
+      <p class="rule">Level ${S.level} · Score ${S.score.toLocaleString()} · Best ${S.best.toLocaleString()}</p>
+      <button class="go" data-act="start">Play again</button>`), 700);
+  }
+  renderHUD();
+}
+function completeSystem(){
+  const f = S.filled, s = S.sys, val = f[0] * f[3] - f[1] * f[2];
+  const bonus = 50 * S.level; S.score += bonus; saveBest();
+  bugs.forEach(b => { if (!b.hidden && !b.dead) burst(b.x, b.y, C.blue, 6, 90); });
+  bugs = []; claims = [null,null,null,null];
+  const T = TARGETS[S.target];
+  let tail = '';
+  if (S.target === 'Nx') tail = ` Since D = ${fmt(s.D)}, x = N<sub>x</sub> / D = ${fmt(val)} / ${par(s.D)} = <b>${fmt(s.x)}</b>.`;
+  if (S.target === 'Ny') tail = ` Since D = ${fmt(s.D)}, y = N<sub>y</sub> / D = ${fmt(val)} / ${par(s.D)} = <b>${fmt(s.y)}</b>.`;
+  say(`${T.html} = ${working(f[0], f[1], f[2], f[3])}.${tail} <span class="pts" style="color:var(--p)">+${bonus}</span>`, 'gold');
+  S.banner = { t: 2.8, val, text: working(f[0], f[1], f[2], f[3]) };
+  arpeggio([523,659,784,1047], 60);
+}
+function afterBanner(){
+  S.banner = null;
+  if (S.sysIndex < SYSTEMS_PER_LEVEL - 1){ S.sysIndex++; startSystem(); return; }
+  const bonus = 200 * S.level; S.score += bonus; saveBest();
+  S.mode = 'levelclear'; S.sysIndex = SYSTEMS_PER_LEVEL; renderHUD();
+  arpeggio([392,523,659,784,1047,1319], 90);
+  showCard(`<h2>Level ${S.level} clear</h2><p>All ${SYSTEMS_PER_LEVEL} ${TARGETS[S.target].html} determinants built.</p>
+    <p class="rule">Level bonus +${bonus.toLocaleString()} · Score ${S.score.toLocaleString()}</p>
+    <p>Something is waiting before level ${S.level + 1}: <b>The Determinator</b>. Your ships are safe there.</p>
+    <button class="go" data-act="next">Face the boss</button>`);
+}
+function advanceLevel(){
+  S.level++; S.lives = Math.min(3, S.lives + 1); S.sysIndex = 0; boss = null;
+  const newTier = tierOf(S.level) !== tierOf(S.level - 1);
+  startSystem(); S.mode = 'play'; hideCard();
+  say(`<b>Level ${S.level}: build ${TARGETS[S.target].html}.</b> ${TARGETS[S.target].rule}${newTier ? ' <b>New:</b> ' + TIER_TXT[tierOf(S.level)] : ''}`, 'gold');
+  renderHUD();
+}
+function updatePlay(dt){
+  if (S.banner){ S.banner.t -= dt; if (S.banner.t <= 0) afterBanner(); return; }
+  for (const b of bugs) stepBug(b, dt);
+  // bullets against bugs; a bug behind a filled cell is shielded
+  for (const bl of bullets){
+    for (const b of bugs){
+      if (b.hidden || b.dead > 0) continue;
+      if (Math.abs(bl.x - b.x) > BUG_R || Math.abs(bl.y - b.y) > BUG_R) continue;
+      const k = cellAt(b.x, b.y);
+      if (k !== null && S.filled[k] !== null) continue;
+      bl.gone = true; hit(b); break;
+    }
+    if (S.mode !== 'play' || S.banner) break;
+  }
+  bullets = bullets.filter(b => !b.gone);
+  // divers ram the ship
+  if (S.mode === 'play' && ship.inv <= 0 && !S.banner){
+    for (const b of bugs){
+      if (b.hidden || b.dead > 0) continue;
+      if (Math.abs(b.x - ship.x) < 26 && Math.abs(b.y - SHIP_Y) < 24){
+        burst(b.x, b.y, C.bad, 18, 170); killBug(b, 1.2);
+        loseShip(`Rammed by a diving <b>${fmt(b.v)}</b>! Slide out from under divers.`);
+        break;
+      }
+    }
+  }
+}
+
+// ---------- boss: The Determinator ----------
+function bossIntro(){
+  S.mode = 'bossintro'; boss = null; bullets = []; bugs = []; renderHUD();
+  showCard(`<h2>Boss: The Determinator</h2>
+    <p>A determinant appears at the top of the screen, with a swarm of numbers buzzing below it. Only one of them is its value.</p>
+    <ul>
+      <li><b>${BOSS_TIME} seconds.</b> Solve as many as you can; each hit brings a new determinant.</li>
+      <li><b>One wrong shot</b> ends the round.</li>
+      <li>Your ships are safe. Solve 5 or more to win a ship back.</li>
+    </ul>
+    <p class="rule">| a  b |<br>| c  d | = ad ${MINUS} bc</p>
+    <button class="go" data-act="beginboss">Bring it on</button>`);
+}
+function bossNums(prob){
+  return shuffle(prob.opts.slice()).map((o, i) => {
+    const a = rand(0, Math.PI * 2), sp = 70 + 14 * S.level;
+    return { ...o, x: 60 + (i % 3) * 180 + rand(-20, 20), y: 250 + Math.floor(i / 3) * 130 + rand(-30, 30),
+             vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * .6, ph: rand(0, 6), jit: rand(.3, 1.2) };
+  });
+}
+function beginBoss(){
+  const prob = bossProblem(S.level);
+  boss = { t: BOSS_TIME, count: 0, prob, nums: bossNums(prob) };
+  bullets = []; S.mode = 'boss'; hideCard();
+  say('<b>The Determinator.</b> Work out ad − bc and shoot the value. One wrong shot ends it.', 'gold');
+  arpeggio([330,392,494,659], 70); renderHUD();
+}
+function updateBoss(dt){
+  boss.t -= dt;
+  if (boss.t <= 0){ boss.t = 0; endBoss(null); return; }
+  for (const n of boss.nums){
+    n.ph += dt * 3; n.jit -= dt;
+    if (n.jit <= 0){ n.jit = rand(.3, 1.2); const a = rand(0, Math.PI * 2), sp = 70 + 14 * S.level; n.vx = Math.cos(a) * sp; n.vy = Math.sin(a) * sp * .6; }
+    n.x += n.vx * dt + Math.sin(n.ph * 2.3) * 40 * dt;
+    n.y += n.vy * dt + Math.cos(n.ph) * 30 * dt;
+    if (n.x < 34){ n.x = 34; n.vx = Math.abs(n.vx); } if (n.x > W - 34){ n.x = W - 34; n.vx = -Math.abs(n.vx); }
+    if (n.y < 210){ n.y = 210; n.vy = Math.abs(n.vy); } if (n.y > 500){ n.y = 500; n.vy = -Math.abs(n.vy); }
+  }
+  for (const bl of bullets){
+    const n = boss.nums.find(n => Math.abs(bl.x - n.x) < 26 && Math.abs(bl.y - n.y) < 24);
+    if (!n) continue;
+    bl.gone = true;
+    if (n.ok){
+      boss.count++;
+      const pts = 50 * S.level; S.score += pts; saveBest();
+      burst(n.x, n.y, C.green, 18, 170);
+      tone(660, .09, 'square', .045, 1.5); setTimeout(() => tone(990, .08, 'square', .035), 70);
+      const p = boss.prob;
+      say(`Yes: ${working(p.a, p.b, p.c, p.d)}. <span class="pts" style="color:var(--p)">+${pts}</span>`, 'good');
+      boss.prob = bossProblem(S.level); boss.nums = bossNums(boss.prob);
+      renderHUD();
+    } else {
+      burst(n.x, n.y, C.bad, 22, 190); shake();
+      tone(110, .3, 'sawtooth', .06, .5);
+      endBoss(n); return;
+    }
+  }
+  bullets = bullets.filter(b => !b.gone);
+}
+function endBoss(wrongNum){
+  const bs = boss, p = bs.prob;
+  let pip = false;
+  if (bs.count >= 5 && S.lives < 3){ S.lives++; pip = true; }
+  const newBest = bs.count > S.bossBest;
+  if (newBest){ S.bossBest = bs.count; try { localStorage.setItem('cg-boss-best', S.bossBest); } catch {} }
+  S.mode = 'bossclear'; bullets = []; renderHUD();
+  const why = wrongNum
+    ? `<p>You shot <b>${fmt(wrongNum.v)}</b>${wrongNum.why ? `: you ${wrongNum.why}` : ', which doesn\'t come from these four numbers'}.</p><p class="rule">${working(p.a, p.b, p.c, p.d)}</p>`
+    : `<p>Time's up.</p>`;
+  if (!wrongNum) arpeggio(bs.count >= 5 ? [523,659,784,1047,1319] : [392,440,494], 80);
+  const nt = targetOf(S.level + 1);
+  showCard(`<h2>${wrongNum ? 'Wrong value' : bs.count >= 5 ? 'Determinator defeated' : 'Round over'}</h2>
+    ${why}
+    <p class="rule">Solved ${bs.count}${newBest ? ' · new boss best!' : ` · boss best ${S.bossBest}`}${pip ? ' · +1 ship' : ''} · Score ${S.score.toLocaleString()}</p>
+    <p>Next up, level ${S.level + 1}: build <b>${TARGETS[nt].html}</b>.</p>
+    <button class="go" data-act="adv">On to level ${S.level + 1}</button>`);
+  say(wrongNum ? `The round ended on a wrong value. ${working(p.a, p.b, p.c, p.d)}.` : `Time's up. You solved <b>${bs.count}</b>.`, wrongNum ? 'bad' : 'gold');
+}
+
+// ---------- pause / toggles ----------
+function pause(){
+  if (S.mode === 'play' || S.mode === 'boss'){
+    S.pausedFrom = S.mode; S.mode = 'paused'; held.left = held.right = false;
+    showCard(`<h2>Paused</h2><p>${S.pausedFrom === 'boss' ? 'The clock is stopped.' : 'The swarm is holding position.'}</p><button class="go" data-act="resume">Resume</button>`);
+    renderHUD();
+  } else if (S.mode === 'paused'){
+    S.mode = S.pausedFrom; hideCard(); renderHUD();
+  }
+}
+function toggleHint(){ S.hint = !S.hint; try { localStorage.setItem('cg-hint', S.hint ? '1' : '0'); } catch {} renderHUD(); }
+function toggleMute(){ S.muted = !S.muted; try { localStorage.setItem('cg-muted', S.muted ? '1' : '0'); } catch {} renderHUD(); }
+function fire(){
+  if (S.mode !== 'play' && S.mode !== 'boss') return;
+  if (bullets.length >= 2) return;
+  bullets.push({ x: ship.x, y: SHIP_Y - 24 });
+  tone(880, .05, 'square', .02, .5);
+}
+// the primary button on a card, if the card has been up long enough not to be skipped by a held Space
+function primary(){
+  if (performance.now() - cardAt < 450) return true;
+  switch (S.mode){
+    case 'title': case 'over': start(); return true;
+    case 'levelclear': bossIntro(); return true;
+    case 'bossintro': beginBoss(); return true;
+    case 'bossclear': advanceLevel(); return true;
+    case 'paused': pause(); return true;
+  }
+  return false;
+}
+
+// ---------- input ----------
+document.addEventListener('keydown', e => {
+  const k = e.key;
+  if (['ArrowLeft','ArrowRight','ArrowDown','ArrowUp',' ','Enter'].includes(k)) e.preventDefault();
+  if (k === 'ArrowLeft' || k === 'a' || k === 'A'){ held.left = true; return; }
+  if (k === 'ArrowRight' || k === 'd' || k === 'D'){ held.right = true; return; }
+  if (k === ' ' || k === 'Enter'){
+    if (e.repeat) return;
+    if (S.mode === 'play' || S.mode === 'boss') return fire();
+    return void primary();
+  }
+  switch (k){
+    case 'p': case 'P': case 'Escape': pause(); break;
+    case 'h': case 'H': toggleHint(); break;
+    case 'm': case 'M': toggleMute(); break;
+  }
+});
+document.addEventListener('keyup', e => {
+  const k = e.key;
+  if (k === 'ArrowLeft' || k === 'a' || k === 'A') held.left = false;
+  if (k === 'ArrowRight' || k === 'd' || k === 'D') held.right = false;
+});
+card.addEventListener('click', e => {
+  const b = e.target.closest('[data-act]'); if (!b) return;
+  b.blur();
+  ({ start, next: bossIntro, beginboss: beginBoss, adv: advanceLevel, resume: pause })[b.dataset.act]();
+});
+document.querySelectorAll('.pad button').forEach(b => {
+  const k = b.dataset.k;
+  b.addEventListener('pointerdown', e => {
+    e.preventDefault(); b.setPointerCapture?.(e.pointerId);
+    if (k === 'fire'){ if (S.mode === 'play' || S.mode === 'boss') fire(); else primary(); }
+    else held[k] = true;
+  });
+  const up = () => { if (k !== 'fire') held[k] = false; };
+  b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('lostpointercapture', up);
+});
+$('hintBtn').addEventListener('click', e => { toggleHint(); e.currentTarget.blur(); });
+$('muteBtn').addEventListener('click', e => { toggleMute(); e.currentTarget.blur(); });
+window.addEventListener('blur', () => { held.left = held.right = false; if (S.mode === 'play' || S.mode === 'boss') pause(); });
+
+// ---------- drawing ----------
+function pill(text, x, y, border, size = 18, fill = C.panel){
+  ctx.font = `700 ${size}px ${MONO}`;
+  const w = Math.max(30, ctx.measureText(text).width + 14), h = size + 8;
+  ctx.fillStyle = fill; ctx.fillRect(x - w / 2, y - h / 2, w, h);
+  ctx.strokeStyle = border; ctx.lineWidth = 2; ctx.strokeRect(x - w / 2 + 1, y - h / 2 + 1, w - 2, h - 2);
+  ctx.fillStyle = C.text; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(text, x, y + 1);
+}
+// "N" with a small subscript x or y
+function targetLabel(t, x, y, size){
+  ctx.textBaseline = 'middle'; ctx.fillStyle = C.blue;
+  ctx.font = `700 ${size}px ${PIX}`; ctx.textAlign = 'right';
+  const tail = ' =';
+  ctx.fillStyle = C.text; ctx.fillText(tail, x, y);
+  let xr = x - ctx.measureText(tail).width;
+  ctx.fillStyle = C.blue;
+  if (t !== 'D'){
+    ctx.font = `700 ${size * .55}px ${PIX}`;
+    const sub = t === 'Nx' ? 'x' : 'y';
+    ctx.fillText(sub, xr, y + size * .3);
+    xr -= ctx.measureText(sub).width + 1;
+    ctx.font = `700 ${size}px ${PIX}`;
+  }
+  ctx.fillText(t === 'D' ? 'D' : 'N', xr, y);
+}
+function drawBars(x0, x1, y0, y1, color = C.text){
+  ctx.fillStyle = color;
+  ctx.fillRect(x0, y0, 5, y1 - y0); ctx.fillRect(x1 - 5, y0, 5, y1 - y0);
+}
+function drawBug(b, t){
+  const flap = Math.floor(t * 4 + b.ph) % 2;
+  ctx.globalAlpha = 1;
+  drawMap(BUG_MAPS[flap ? b.map : 1 - b.map], b.pal, Math.round(b.x - 16), Math.round(b.y - 26), 3);
+  pill(fmt(b.v), b.x, b.y + 11, b.pal.b);
+}
+function drawFrame(t){
+  const T = TARGETS[S.target];
+  targetLabel(S.target, FRAME.x - 10, FY + CH + GAP / 2, 30);
+  for (let k = 0; k < 4; k++){
+    const c = CELLS[k];
+    if (S.filled[k] === null){
+      ctx.fillStyle = 'rgba(26,31,53,.55)'; ctx.fillRect(c.x, c.y, c.w, c.h);
+      ctx.strokeStyle = C.line; ctx.lineWidth = 2; ctx.setLineDash([6, 5]);
+      ctx.strokeRect(c.x + 1, c.y + 1, c.w - 2, c.h - 2); ctx.setLineDash([]);
+      if (S.hint){
+        const r = T.roles[k];
+        ctx.fillStyle = r[0] === 'c' ? 'rgba(255,197,61,.35)' : 'rgba(138,147,184,.35)';
+        ctx.font = `700 28px ${MONO}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(ROLE[r], c.x + c.w / 2, c.y + c.h / 2);
+      }
+    }
+  }
+}
+function drawFilled(t){
+  for (let k = 0; k < 4; k++){
+    const c = CELLS[k];
+    if (S.filled[k] !== null){
+      ctx.fillStyle = C.blue; ctx.fillRect(c.x, c.y, c.w, c.h);
+      ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(c.x, c.y, c.w, 4);
+      ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.fillRect(c.x, c.y + c.h - 5, c.w, 5);
+      ctx.fillStyle = C.ink; ctx.font = `700 34px ${MONO}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(fmt(S.filled[k]), c.x + c.w / 2, c.y + c.h / 2 + 1);
+    }
+    const fx = cellFx[k];
+    if (fx && (!fx.blink || Math.floor(fx.t * 6) % 2 === 0)){
+      ctx.strokeStyle = fx.c; ctx.lineWidth = 4; ctx.strokeRect(c.x - 2, c.y - 2, c.w + 4, c.h + 4);
+      if (!fx.blink){ ctx.globalAlpha = Math.min(.45, fx.t); ctx.fillStyle = fx.c; ctx.fillRect(c.x, c.y, c.w, c.h); ctx.globalAlpha = 1; }
+    }
+  }
+  drawBars(FRAME.x, FRAME.x + FRAME.w, FRAME.y, FRAME.y + FRAME.h);
+  if (S.banner){
+    ctx.font = `700 30px ${PIX}`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillStyle = C.gold;
+    const txt = '= ' + fmt(S.banner.val), tw = ctx.measureText(txt).width;
+    const xr = FRAME.x + FRAME.w + 8;
+    if (xr + tw < W - 4) ctx.fillText(txt, xr, FY + CH + GAP / 2);
+    ctx.font = `600 20px ${MONO}`; ctx.textAlign = 'center';
+    ctx.fillText(S.banner.text, W / 2, FRAME.y + FRAME.h + 36);
+  }
+}
+function drawShip(t){
+  if (S.mode === 'over') return;
+  if (ship.inv > 0 && Math.floor(t * 10) % 2 === 0) return;
+  drawMap(SHIP_MAP, SHIP_COL, Math.round(ship.x - 19.5), SHIP_Y - 20, 3);
+}
+function drawBoss(t){
+  const p = boss ? boss.prob : null;
+  // timer
+  const frac = boss ? boss.t / BOSS_TIME : 1;
+  ctx.fillStyle = C.panel2; ctx.fillRect(20, 14, W - 40, 10);
+  ctx.fillStyle = frac < .25 ? C.bad : C.gold; ctx.fillRect(20, 14, (W - 40) * frac, 10);
+  ctx.font = `400 12px ${PIX}`; ctx.fillStyle = C.muted; ctx.textBaseline = 'middle';
+  ctx.textAlign = 'left'; ctx.fillText('SOLVED ' + (boss ? boss.count : 0), 20, 40);
+  ctx.textAlign = 'right'; ctx.fillText((boss ? boss.t.toFixed(1) : BOSS_TIME) + ' S', W - 20, 40);
+  if (!p){
+    ctx.font = `700 26px ${PIX}`; ctx.fillStyle = C.pink; ctx.textAlign = 'center';
+    ctx.fillText('THE DETERMINATOR', W / 2, 120);
+    return;
+  }
+  // the determinant
+  const cx = W / 2 - 40, top = 62, cw = 64, rh = 46;
+  ctx.font = `700 34px ${MONO}`; ctx.fillStyle = C.text; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(fmt(p.a), cx - cw / 2, top + rh / 2); ctx.fillText(fmt(p.b), cx + cw / 2, top + rh / 2);
+  ctx.fillText(fmt(p.c), cx - cw / 2, top + rh * 1.5); ctx.fillText(fmt(p.d), cx + cw / 2, top + rh * 1.5);
+  drawBars(cx - cw - 14, cx + cw + 14, top - 4, top + rh * 2 + 4);
+  ctx.font = `700 30px ${PIX}`; ctx.textAlign = 'left'; ctx.fillStyle = C.gold;
+  ctx.fillText('= ?', cx + cw + 28, top + rh);
+  // the swarm
+  for (const n of boss.nums){
+    const flap = Math.floor(t * 5 + n.ph) % 2;
+    drawMap(BUG_MAPS[flap], BOSS_PAL, Math.round(n.x - 16), Math.round(n.y - 28), 3);
+    pill(fmt(n.v), n.x, n.y + 10, C.pink, 20);
+  }
+}
+function draw(t){
+  ctx.setTransform(scale, 0, 0, scale, 0, 0);
+  ctx.fillStyle = C.ground; ctx.fillRect(0, 0, W, H);
+  for (const s of stars){
+    ctx.globalAlpha = .45 + .45 * Math.sin(t * 3 + s.ph);
+    ctx.fillStyle = s.c; ctx.fillRect(Math.round(s.x), Math.round(s.y), 2, 2);
+  }
+  ctx.globalAlpha = 1;
+  if (bossish()) drawBoss(t);
+  else if (S.sys){
+    drawFrame(t);
+    for (const b of bugs) if (!b.hidden && !(b.dead > 0)) drawBug(b, t);
+    drawFilled(t);
+  }
+  ctx.fillStyle = C.gold;
+  for (const b of bullets) ctx.fillRect(Math.round(b.x - 1.5), Math.round(b.y - 8), 3, 12);
+  drawShip(t);
+  for (const p of parts){ ctx.globalAlpha = Math.max(0, p.life / p.max); ctx.fillStyle = p.c; ctx.fillRect(p.x - 2, p.y - 2, 4, 4); }
+  ctx.globalAlpha = 1;
+}
+
+// ---------- loop ----------
+let last = null;
+function frame(ts){
+  const t = ts / 1000;
+  if (last === null) last = t;
+  const dt = Math.min(.05, t - last); last = t;
+  const live = S.mode === 'play' || S.mode === 'boss';
+  if (S.mode !== 'paused'){
+    for (const s of stars){ s.y += s.sp * dt; if (s.y > H){ s.y = 0; s.x = rand(0, W); } }
+    for (const p of parts){ p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt; }
+    parts = parts.filter(p => p.life > 0);
+    for (let k = 0; k < 4; k++) if (cellFx[k]){ cellFx[k].t -= dt; if (cellFx[k].t <= 0) cellFx[k] = null; }
+  }
+  if (live){
+    const dir = (held.right ? 1 : 0) - (held.left ? 1 : 0);
+    ship.x = Math.max(24, Math.min(W - 24, ship.x + dir * 360 * dt));
+    if (ship.inv > 0) ship.inv -= dt;
+    for (const b of bullets) b.y -= 780 * dt;
+    bullets = bullets.filter(b => b.y > -20);
+    if (S.mode === 'play') updatePlay(dt); else updateBoss(dt);
+  }
+  draw(t);
+  requestAnimationFrame(frame);
+}
+
+function titleCard(){
+  showCard(`<h2>Build determinants, one coefficient at a time</h2>
+    <p>Six numbers from a pair of equations swoop through the 2&times;2 frame. Shoot each one while it drifts through the cell where it belongs.</p>
+    <p class="rule">For a₁x + b₁y = c₁ and a₂x + b₂y = c₂<br>D = |a₁ b₁; a₂ b₂| · N<sub>x</sub> = |c₁ b₁; c₂ b₂| · N<sub>y</sub> = |a₁ c₁; a₂ c₂|</p>
+    <ul>
+      <li><kbd>←</kbd> <kbd>→</kbd> move · <kbd>Space</kbd> fire · <kbd>H</kbd> hints</li>
+      <li>Levels cycle through D, N<sub>x</sub> and N<sub>y</sub>. Two of the six numbers never belong.</li>
+      <li>A number in the wrong cell costs a ship. Lose all 3 and the game ends.</li>
+      <li>Missed shots outside the frame only cost 5 points.</li>
+      <li>After level 3 the equations get trickier, and from level 4 some numbers dive at you.</li>
+      <li>A <b>boss</b> waits between levels. Bosses cost points, never ships.</li>
+    </ul>
+    <button class="go" data-act="start">Launch</button>`);
+}
+
+function boot(data){
+  fitCanvas();
+  if ('ResizeObserver' in window) new ResizeObserver(fitCanvas).observe(screen); else window.addEventListener('resize', fitCanvas);
+  const saved = data && data.S;
+  if (saved && saved.sys){
+    Object.assign(S, saved);
+    if (['bossintro','boss','bossclear'].includes(S.mode) || (S.mode === 'paused' && S.pausedFrom === 'boss')){ S.sys = saved.sys; bossIntro(); }
+    else if (['play','paused','levelclear'].includes(S.mode)){
+      if (S.sysIndex >= SYSTEMS_PER_LEVEL) S.sysIndex = SYSTEMS_PER_LEVEL - 1;
+      startSystem(); S.mode = 'play'; pause();
+    } else { S.mode = 'title'; S.sys = null; titleCard(); }
+  } else {
+    S.target = 'D'; S.sys = makeSystem(1); bugs = []; titleCard();
+  }
+  renderHUD();
+  requestAnimationFrame(frame);
+}
+try { window.claude?.hot?.snapshot?.(() => ({ S: { ...S } })); } catch {}
+window.claude?.hot?.ready ? window.claude.hot.ready(boot) : boot(window.claude?.hot?.data ?? {});
+})();
+</script>
+</html>
