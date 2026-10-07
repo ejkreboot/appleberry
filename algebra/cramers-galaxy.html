@@ -66,6 +66,9 @@ kbd{display:inline-block;min-width:24px;text-align:center;padding:2px 6px;font:6
 .toggles{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 .tbtn{background:var(--panel2);border:1px solid var(--line);border-radius:3px;padding:5px 9px;font:400 11px var(--pixel);cursor:pointer;letter-spacing:.05em}
 .tbtn[aria-pressed="true"]{background:var(--p);color:var(--ink);border-color:var(--p)}
+.pus{display:flex;flex-direction:column;gap:9px;margin:10px 0 0;font-size:12px;line-height:1.4;color:var(--muted)}
+.pus div{display:flex;flex-direction:column;gap:3px;align-items:flex-start}
+.chip{font:400 10px var(--pixel);padding:2px 6px;border-radius:2px;color:var(--ink);letter-spacing:.04em}
 
 /* ---------- playfield ---------- */
 .play{display:flex;flex-direction:column;gap:10px;min-width:0}
@@ -209,6 +212,16 @@ body.boss #sysBox,body.boss #targetBox{display:none}
         <p class="note" id="tnote"></p>
         <p class="note">For <b>a₁x + b₁y = c₁</b> and <b>a₂x + b₂y = c₂</b>: x = N<sub>x</sub> / D and y = N<sub>y</sub> / D.</p>
       </div>
+      <div class="box">
+        <div class="lbl">Power-ups</div>
+        <div class="pus">
+          <div><span class="chip" style="background:var(--s)">+1 SHIP</span>An extra ship.</div>
+          <div><span class="chip" style="background:var(--f)">DET</span>Shots only hit a number in its correct cell, and home in on it.</div>
+          <div><span class="chip" style="background:var(--p)">GLOW</span>Numbers glow while they're in their correct cell.</div>
+        </div>
+        <p class="note">Don't shoot a glowing carrier. Let it drop the capsule, then fly over it.</p>
+      </div>
+
       <div class="box" id="bossPanel">
         <div class="lbl">Boss &middot; The Determinator</div>
         <div class="bossstat">
@@ -266,7 +279,7 @@ const TIER_TXT = ['',
   'Negative numbers join the swarm.',
   'Terms out of order. Check which number goes with x and which with y.',
   'Equations out of standard form, and missing terms (a coefficient of 0).'];
-const SYSTEMS_PER_LEVEL = 3, BOSS_TIME = 15;
+const SYSTEMS_PER_LEVEL = 3, BOSS_TIME = 30;
 
 // ---------- helpers ----------
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -404,6 +417,13 @@ try {
 
 let ship = { x: W / 2, inv: 0 }, bullets = [], bugs = [], parts = [], claims = [null,null,null,null], cellFx = [null,null,null,null];
 let boss = null;                 // { t, count, prob, nums }
+// power-ups: a carrier bug flies low and drops a capsule; fly over it to collect
+const PU = {
+  life: { c:'#ff5a74', tag:'+1 SHIP', name:'Extra ship' },
+  seek: { c:'#6fe08a', tag:'DET', name:'Determinator rounds', dur:10 },
+  glow: { c:'#ffc53d', tag:'GLOW', name:'Glow sticks', dur:12 }
+};
+let pw = { seek:0, glow:0 }, pickups = [], carrierT = 10, carrierTold = false;
 let held = { left:false, right:false }, cardAt = 0;
 
 // ---------- DOM ----------
@@ -475,10 +495,9 @@ const stars = Array.from({ length: 80 }, () => ({ x: rand(0, W), y: rand(0, H), 
 const need = k => S.sys[TARGETS[S.target].roles[k]];
 const swoopSpeed = () => Math.min(430, 230 + 18 * (S.level - 1));
 const driftSpeed = () => Math.min(150, 52 * Math.pow(1.1, S.level - 1));
-// a bug crossing its own cell slows further and hovers at the centre long enough for the
-// rest of the swarm to clear the line of fire; this eases off as levels advance but never vanishes
-const homeSlow  = () => .65 - .3 * ease(S.level);
-const homeHover = () => 1.5 + 2.5 * ease(S.level);
+// a bug crossing its own cell keeps moving but slows down, giving the rest of the swarm time
+// to clear the line of fire; it speeds back up a little as levels advance
+const homeSlow  = () => .4 - .1 * ease(S.level);
 const diveChance = () => S.level >= 4 ? Math.min(.4, .15 + .04 * (S.level - 4)) : 0;
 const rndField = () => ({ x: rand(40, W - 40), y: rand(40, 420) });
 function offPoint(){
@@ -529,19 +548,9 @@ function plan(b){
   const half = (vert ? c.h : c.w) / 2 + 14;
   const A = { x: cx - dir.x * half, y: cy - dir.y * half }, B = { x: cx + dir.x * half, y: cy + dir.y * half };
   b.segs.push(bez(P, rndField(), { x: A.x - dir.x * 90, y: A.y - dir.y * 90 }, A, sw));
-  const Cc = { x: cx, y: cy };
-  if (need(k) === b.v){
-    const ds = driftSpeed() * homeSlow(), hv = homeHover();
-    b.segs.push(line(A, Cc, ds));
-    if (hv > .05) b.segs.push({ type:'hold', p: Cc, dur: hv });
-    const tail = line(Cc, B, ds);
-    tail.onEnd = () => release(b);
-    b.segs.push(tail);
-  } else {
-    const drift = line(A, B, driftSpeed());
-    drift.onEnd = () => release(b);
-    b.segs.push(drift);
-  }
+  const drift = line(A, B, driftSpeed() * (need(k) === b.v ? homeSlow() : 1));
+  drift.onEnd = () => release(b);
+  b.segs.push(drift);
   if (Math.random() < .35) b.segs.push(loopSeg(B, sw * .8));
   const out = { x: B.x + dir.x * 110, y: B.y + dir.y * 110 };
   if (Math.random() < diveChance()){
@@ -581,6 +590,93 @@ function cellAt(x, y){
 }
 function killBug(b, delay){
   release(b); b.dead = delay; b.hidden = true; b.seg = null; b.segs = [];
+  b.carry = null; b.harmless = false;
+}
+// a bug sitting in an open cell that needs its value: the only target Determinator rounds lock onto, and what glow sticks light up
+function goodHere(b){
+  const k = cellAt(b.x, b.y);
+  return k !== null && S.filled[k] === null && need(k) === b.v;
+}
+
+// ---------- power-ups ----------
+// an off-screen bug is sent in from the side, below the frame, to drop a capsule and leave by the other side
+function launchCarrier(){
+  const pool = bugs.filter(b => b.hidden && !(b.dead > 0) && b.claim === null && (!b.seg || b.seg.type === 'wait'));
+  if (!pool.length) return false;
+  const b = pick(pool), type = pick(['seek', 'glow'].concat(S.lives < 3 ? ['life'] : []));
+  const s = Math.random() < .5 ? -1 : 1, sp = 210;
+  const st = { x: s < 0 ? -40 : W + 40, y: rand(390, 440) }, drop = { x: rand(70, W - 70), y: 530 };
+  const inb = bez(st, { x: st.x - s * 140, y: st.y + 20 }, { x: drop.x, y: drop.y - 90 }, drop, sp);
+  inb.onEnd = () => {
+    if (!b.carry) return;
+    pickups.push({ type: b.carry, x: b.x, y: b.y + 38, life: 8 });
+    b.carry = null; tone(660, .1, 'triangle', .04, .7);
+  };
+  const out = bez(drop, { x: drop.x, y: drop.y - 90 }, { x: W / 2, y: 400 }, { x: s < 0 ? W + 40 : -40, y: rand(380, 430) }, sp * 1.2);
+  out.onEnd = () => { b.harmless = false; };
+  b.carry = type; b.harmless = true;
+  b.x = st.x; b.y = st.y; b.seg = null;
+  b.segs = [inb, { type:'hold', p: drop, dur:.35 }, out, wait(rand(.4, 1))];
+  if (!carrierTold){
+    carrierTold = true;
+    say(`A glowing bug is carrying <b>${PU[type].name.toLowerCase()}</b>. Don't shoot it. Let it drop the capsule, then fly over the capsule to grab it.`, 'gold');
+  }
+  return true;
+}
+function shootCarrier(b){
+  const P = PU[b.carry];
+  burst(b.x, b.y, P.c, 16, 150); killBug(b, 1.0);
+  tone(200, .12, 'triangle', .04, .5);
+  say(`You shot the carrier, and its <b>${P.name.toLowerCase()}</b> went with it. Let glowing bugs through.`);
+}
+function collect(p){
+  const P = PU[p.type];
+  burst(p.x, p.y, P.c, 18, 150);
+  arpeggio([659, 784, 988], 55);
+  if (p.type === 'life'){
+    S.lives = Math.min(3, S.lives + 1);
+    say(`<b>Extra ship!</b>`, 'good');
+  } else {
+    pw[p.type] = P.dur;
+    say(p.type === 'seek'
+      ? `<b>Determinator rounds</b> for ${P.dur} s. Each shot passes through every number except one inside a cell where it belongs, and homes in on that one.`
+      : `<b>Glow sticks</b> for ${P.dur} s. A number glows while it's inside a cell where it belongs. That's your moment to shoot.`, 'good');
+  }
+  renderHUD();
+}
+function stepPower(dt){
+  for (const p of pickups){
+    p.y = Math.min(SHIP_Y + 4, p.y + 150 * dt); p.life -= dt;
+    if (p.life > 0 && p.y > SHIP_Y - 30 && Math.abs(p.x - ship.x) < 32){ p.life = 0; collect(p); }
+  }
+  pickups = pickups.filter(p => p.life > 0);
+  if (S.banner) return;
+  pw.seek = Math.max(0, pw.seek - dt); pw.glow = Math.max(0, pw.glow - dt);
+  carrierT -= dt;
+  if (carrierT <= 0){
+    if (!pickups.length && !bugs.some(b => b.carry) && launchCarrier()) carrierT = rand(14, 22);
+    else carrierT = 1;
+  }
+}
+function stepSeekers(dt){
+  const SP = 620, TURN = 10;
+  for (const bl of bullets){
+    if (!bl.seek) continue;
+    bl.life -= dt;
+    let best = null, bd = Infinity;
+    for (const b of bugs){
+      if (b.hidden || b.dead > 0 || !goodHere(b)) continue;
+      const d = dist(bl, b); if (d < bd){ bd = d; best = b; }
+    }
+    if (best){
+      const cur = Math.atan2(bl.vy, bl.vx);
+      let diff = Math.atan2(best.y - bl.y, best.x - bl.x) - cur;
+      diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+      const a = cur + Math.max(-TURN * dt, Math.min(TURN * dt, diff));
+      bl.vx = Math.cos(a) * SP; bl.vy = Math.sin(a) * SP;
+    }
+    bl.x += bl.vx * dt; bl.y += bl.vy * dt;
+  }
 }
 
 // ---------- particles ----------
@@ -609,6 +705,7 @@ function startSystem(){
 function start(){
   Object.assign(S, { level:1, score:0, lives:3, streak:0, sysIndex:0 });
   boss = null; ship.x = W / 2; ship.inv = 0; parts = [];
+  pw = { seek:0, glow:0 }; pickups = []; carrierT = rand(9, 13); carrierTold = false;
   startSystem(); S.mode = 'play'; hideCard();
   say(`<b>Level 1: build D.</b> Shoot each coefficient while it drifts through its cell of the determinant. The constants don't belong in D.`, 'gold');
   arpeggio([262,330,392,523]); renderHUD();
@@ -699,15 +796,18 @@ function advanceLevel(){
   renderHUD();
 }
 function updatePlay(dt){
+  stepPower(dt);
   if (S.banner){ S.banner.t -= dt; if (S.banner.t <= 0) afterBanner(); return; }
   for (const b of bugs) stepBug(b, dt);
-  // bullets against bugs; a bug crossing a filled cell is shielded
+  stepSeekers(dt);
+  // bullets against bugs; a bug crossing a filled cell is shielded, and Determinator rounds pass through all but correct bugs
   for (const bl of bullets){
     for (const b of bugs){
       if (b.hidden || b.dead > 0) continue;
       if (Math.abs(bl.x - b.x) > BUG_R || Math.abs(bl.y - b.y) > BUG_R) continue;
-      const k = cellAt(b.x, b.y);
-      if (k !== null && S.filled[k] !== null) continue;
+      if (bl.seek){ if (!goodHere(b)) continue; }
+      else if (b.carry){ bl.gone = true; shootCarrier(b); break; }
+      else { const k = cellAt(b.x, b.y); if (k !== null && S.filled[k] !== null) continue; }
       bl.gone = true; hit(b); break;
     }
     if (S.mode !== 'play' || S.banner) break;
@@ -716,7 +816,7 @@ function updatePlay(dt){
   // divers ram the ship
   if (S.mode === 'play' && ship.inv <= 0 && !S.banner){
     for (const b of bugs){
-      if (b.hidden || b.dead > 0) continue;
+      if (b.hidden || b.dead > 0 || b.harmless) continue;
       if (Math.abs(b.x - ship.x) < 26 && Math.abs(b.y - SHIP_Y) < 24){
         burst(b.x, b.y, C.bad, 18, 170); killBug(b, 1.2);
         loseShip(`Rammed by a diving <b>${fmt(b.v)}</b>! Slide out from under divers.`);
@@ -728,7 +828,7 @@ function updatePlay(dt){
 
 // ---------- boss: The Determinator ----------
 function bossIntro(){
-  S.mode = 'bossintro'; boss = null; bullets = []; bugs = []; renderHUD();
+  S.mode = 'bossintro'; boss = null; bullets = []; bugs = []; pickups = []; renderHUD();
   showCard(`<h2>Boss: The Determinator</h2>
     <p>A determinant appears at the top of the screen, with a swarm of numbers buzzing below it. Only one of them is its value.</p>
     <ul>
@@ -819,6 +919,12 @@ function toggleHint(){ S.hint = !S.hint; try { localStorage.setItem('cg-hint', S
 function toggleMute(){ S.muted = !S.muted; try { localStorage.setItem('cg-muted', S.muted ? '1' : '0'); } catch {} renderHUD(); }
 function fire(){
   if (S.mode !== 'play' && S.mode !== 'boss') return;
+  if (S.mode === 'play' && pw.seek > 0){
+    if (bullets.length >= 3) return;
+    bullets.push({ x: ship.x, y: SHIP_Y - 24, vx: 0, vy: -620, seek: true, life: 1.6 });
+    tone(1175, .06, 'square', .025, .6);
+    return;
+  }
   if (bullets.length >= 2) return;
   bullets.push({ x: ship.x, y: SHIP_Y - 24 });
   tone(880, .05, 'square', .02, .5);
@@ -907,8 +1013,34 @@ function drawBars(x0, x1, y0, y1, color = C.text){
   ctx.fillStyle = color;
   ctx.fillRect(x0, y0, 5, y1 - y0); ctx.fillRect(x1 - 5, y0, 5, y1 - y0);
 }
+function capsule(type, x, y){
+  const P = PU[type];
+  ctx.font = `400 10px ${PIX}`;
+  const w = Math.round(ctx.measureText(P.tag).width + 14), h = 18, x0 = Math.round(x - w / 2), y0 = Math.round(y - h / 2);
+  ctx.fillStyle = P.c; ctx.fillRect(x0, y0, w, h);
+  ctx.fillStyle = 'rgba(255,255,255,.45)'; ctx.fillRect(x0, y0, w, 3);
+  ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.fillRect(x0, y0 + h - 3, w, 3);
+  ctx.fillStyle = C.ink; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(P.tag, x, y + 1);
+}
+function halo(x, y, r, color, t, speed){
+  ctx.globalAlpha = .22 + .14 * Math.sin(t * speed);
+  ctx.fillStyle = color; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+  ctx.globalAlpha = .75; ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.stroke();
+  ctx.globalAlpha = 1;
+}
 function drawBug(b, t){
   const flap = Math.floor(t * 4 + b.ph) % 2;
+  if (b.carry){
+    // carriers get a spinning dashed ring, so they never look like a glow-stick highlight
+    ctx.strokeStyle = PU[b.carry].c; ctx.lineWidth = 3; ctx.setLineDash([7, 6]); ctx.lineDashOffset = -t * 40;
+    ctx.beginPath(); ctx.arc(b.x, b.y - 4, 32, 0, Math.PI * 2); ctx.stroke();
+    ctx.setLineDash([]); ctx.lineDashOffset = 0;
+    ctx.fillStyle = PU[b.carry].c; ctx.fillRect(Math.round(b.x) - 1, Math.round(b.y + 22), 2, 8);
+    capsule(b.carry, b.x, b.y + 38);
+  } else if (pw.glow > 0 && goodHere(b)){
+    halo(b.x, b.y - 4, 34 + 4 * Math.sin(t * 12), PU.glow.c, t, 12);
+  }
   // over a filled cell a bug is shielded from fire, so it flies faded
   const k = cellAt(b.x, b.y);
   ctx.globalAlpha = k !== null && S.filled[k] !== null ? .45 : 1;
@@ -970,6 +1102,18 @@ function drawFilled(t){
     ctx.fillText(S.banner.text, W / 2, FRAME.y + FRAME.h + 36);
   }
 }
+// active power-up timers, bottom-left of the field
+function drawPower(){
+  let x = 10;
+  ctx.font = `400 11px ${PIX}`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  for (const k of ['seek', 'glow']){
+    if (pw[k] <= 0) continue;
+    const P = PU[k], txt = `${P.tag} ${Math.ceil(pw[k])}`, w = ctx.measureText(txt).width;
+    ctx.fillStyle = P.c; ctx.fillText(txt, x, 629);
+    ctx.fillRect(x, 636, w * pw[k] / P.dur, 2);
+    x += w + 16;
+  }
+}
 function drawShip(t){
   if (S.mode === 'over') return;
   if (ship.inv > 0 && Math.floor(t * 10) % 2 === 0) return;
@@ -1017,9 +1161,19 @@ function draw(t){
     drawFrame(t);
     drawFilled(t);
     for (const b of bugs) if (!b.hidden && !(b.dead > 0)) drawBug(b, t);
+    for (const p of pickups) if (p.life > 2 || Math.floor(t * 8) % 2) capsule(p.type, p.x, p.y);
+    drawPower();
   }
-  ctx.fillStyle = C.gold;
-  for (const b of bullets) ctx.fillRect(Math.round(b.x - 1.5), Math.round(b.y - 8), 3, 12);
+  for (const b of bullets){
+    if (b.seek){
+      const a = Math.atan2(b.vy, b.vx);
+      ctx.fillStyle = 'rgba(111,224,138,.35)';
+      for (let i = 1; i <= 3; i++) ctx.fillRect(Math.round(b.x - Math.cos(a) * 7 * i - 2), Math.round(b.y - Math.sin(a) * 7 * i - 2), 4, 4);
+      ctx.fillStyle = C.green; ctx.fillRect(Math.round(b.x - 3), Math.round(b.y - 3), 6, 6);
+    } else {
+      ctx.fillStyle = C.gold; ctx.fillRect(Math.round(b.x - 1.5), Math.round(b.y - 8), 3, 12);
+    }
+  }
   drawShip(t);
   for (const p of parts){ ctx.globalAlpha = Math.max(0, p.life / p.max); ctx.fillStyle = p.c; ctx.fillRect(p.x - 2, p.y - 2, 4, 4); }
   ctx.globalAlpha = 1;
@@ -1042,8 +1196,8 @@ function frame(ts){
     const dir = (held.right ? 1 : 0) - (held.left ? 1 : 0);
     ship.x = Math.max(24, Math.min(W - 24, ship.x + dir * 360 * dt));
     if (ship.inv > 0) ship.inv -= dt;
-    for (const b of bullets) b.y -= 780 * dt;
-    bullets = bullets.filter(b => b.y > -20);
+    for (const b of bullets) if (!b.seek) b.y -= 780 * dt;
+    bullets = bullets.filter(b => b.y > -20 && b.y < H + 20 && b.x > -20 && b.x < W + 20 && !(b.life <= 0));
     if (S.mode === 'play') updatePlay(dt); else updateBoss(dt);
   }
   draw(t);
@@ -1053,12 +1207,11 @@ function frame(ts){
 function titleCard(){
   showCard(`<h2>Build determinants, one coefficient at a time</h2>
     <p>Six numbers from a pair of equations swoop through the 2&times;2 frame. Shoot each one while it drifts through the cell where it belongs.</p>
-    <p class="rule">For a₁x + b₁y = c₁ and a₂x + b₂y = c₂<br>D = |a₁ b₁; a₂ b₂| · N<sub>x</sub> = |c₁ b₁; c₂ b₂| · N<sub>y</sub> = |a₁ c₁; a₂ c₂|</p>
     <ul>
       <li><kbd>←</kbd> <kbd>→</kbd> move · <kbd>Space</kbd> fire · <kbd>H</kbd> hints</li>
       <li>Levels cycle through D, N<sub>x</sub> and N<sub>y</sub>. Two of the six numbers never belong.</li>
       <li>A number in the wrong cell costs a ship. Lose all 3 and the game ends.</li>
-      <li>Missed shots outside the frame only cost 5 points.</li>
+      <li>Collect powerups along the way to gain advantages.</li>
       <li>After level 3 the equations get trickier, and from level 4 some numbers dive at you.</li>
       <li>A <b>boss</b> waits between levels. Bosses cost points, never ships.</li>
     </ul>
