@@ -247,7 +247,7 @@ const TIMES = '×';
 const GROUND_Y = 592, CITY_X = [46, 106, 166, 314, 374, 434], BAT = { x: 240, y: GROUND_Y - 21 };
 const FAST = 3;                     // seconds: a correct answer faster than this counts toward fluency
 const SHOT_T = .28;                 // interceptor flight time
-const WAVES_PER_BOSS = 2, BOSS_TIME = 45, WH_TOP = 140, WH_LAND = GROUND_Y - 70;
+const WAVES_PER_BOSS = 2, BOSS_TIME = 60, WH_TOP = 140, WH_LAND = GROUND_Y - 70;
 
 // ---------- helpers ----------
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -465,8 +465,15 @@ function stepShots(dt){
 }
 
 // ---------- waves ----------
-const fallTime = w => Math.max(6, 15 * Math.pow(.91, w - 1));
-const maxLive  = w => Math.min(4, 1 + Math.ceil(w / 2));
+// pacing: a new missile arrives about once per "budget" seconds. The budget shrinks slowly with each
+// wave, but never below 1.5× her typical answer time, so the game pushes only a little past her speed.
+function typicalRt(){
+  const r = factList().map(([a, b]) => facts[key(a, b)]).filter(f => f && f.ok && f.rt).map(f => f.rt).sort((x, y) => x - y);
+  return r.length < 5 ? 6 : r[Math.floor(r.length / 2)];
+}
+const budget   = w => Math.max(10 * Math.pow(.93, w - 1), 1.5 * typicalRt());
+const maxLive  = w => Math.min(3, 2 + Math.floor((w - 1) / 4));
+const fallTime = w => budget(w) * maxLive(w) * 1.15;
 const waveSize = w => Math.min(24, 10 + 2 * (w - 1));
 function spawn(){
   const alive = [0,1,2,3,4,5].filter(i => cities[i]);
@@ -638,7 +645,7 @@ function bossIntro(){
     <p class="rule">This is factoring. To factor x² + 13x + 36, you need the pair of 36 that adds up to 13.</p>
     <button class="go" data-act="beginboss">Bring it on</button>`);
 }
-const warheadFall = () => Math.max(14, 26 - 2 * (S.wave / WAVES_PER_BOSS - 1));
+const warheadFall = () => Math.max(22, 34 - 2 * (S.wave / WAVES_PER_BOSS - 1));
 function bossProblem(){
   const cand = [], w = [];
   for (let n = 12; n <= S.max * S.max; n++){
