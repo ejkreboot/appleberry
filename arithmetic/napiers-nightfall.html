@@ -1,0 +1,993 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Napier's Nightfall</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Silkscreen:wght@400;700&display=swap">
+<style>
+:root{
+  --ground:#0b0d18; --panel:#131728; --panel2:#1a1f35; --line:#2a3152; --text:#e4e9ff; --muted:#8a93b8;
+  --s:#ff5a74; --p:#ffc53d; --d:#3fb8ff; --f:#6fe08a; --bad:#ff3b3b; --orb:#f2f5ff; --ink:#0b0d18;
+  --pixel:"Silkscreen","Courier New",monospace;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{
+  margin:0;
+  background-color:var(--ground);
+  background-image:
+    linear-gradient(rgba(42,49,82,.28) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(42,49,82,.28) 1px,transparent 1px);
+  background-size:28px 28px;
+  color:var(--text); font-family:var(--mono); font-size:14px; line-height:1.45;
+  padding-inline:16px;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--p);outline-offset:2px}
+
+.app{max-width:1220px;margin:0 auto;padding-block:20px 32px;display:flex;flex-direction:column;gap:18px}
+
+/* ---------- header ---------- */
+.top{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.top > div:last-child{flex:1 1 300px;min-width:0}
+.logo{width:62px;height:62px;flex:none;background:var(--s);color:var(--ink);border-radius:3px;position:relative;display:grid;place-items:center;
+  box-shadow:inset 0 4px 0 rgba(255,255,255,.4),inset 0 -5px 0 rgba(0,0,0,.28),inset 4px 0 0 rgba(255,255,255,.18),inset -4px 0 0 rgba(0,0,0,.18)}
+/* one cell of a Napier's bone: 7 × 8 = 56, tens above the diagonal, units below */
+.logo .bone{width:40px;height:40px;border:3px solid var(--ink);position:relative;
+  background:linear-gradient(to bottom right,transparent calc(50% - 1.5px),var(--ink) calc(50% - 1.5px),var(--ink) calc(50% + 1.5px),transparent calc(50% + 1.5px))}
+.logo .bone span{position:absolute;font:700 14px/1 var(--mono)}
+.logo .bone span:first-child{top:3px;left:4px}
+.logo .bone span:last-child{bottom:3px;right:4px}
+h1{margin:0;font:700 clamp(22px,4.2vw,40px)/1 var(--pixel);letter-spacing:.02em;text-wrap:balance}
+h1 .a{color:var(--s)} h1 .b{color:var(--p)}
+.tag{margin:6px 0 0;color:var(--muted);font-size:13px}
+.tag b{color:var(--text);font-weight:600}
+
+/* ---------- stage ---------- */
+.stage{display:grid;grid-template-columns:minmax(170px,210px) minmax(0,560px) minmax(270px,320px);gap:22px;justify-content:center;align-items:start}
+.hud{display:flex;flex-direction:column;gap:14px}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:14px}
+.lbl{font:400 11px var(--pixel);letter-spacing:.08em;color:var(--muted);text-transform:uppercase}
+
+.stats{display:grid;grid-template-columns:1fr;gap:10px;margin:0}
+.stat{display:flex;justify-content:space-between;align-items:baseline;gap:8px;border-bottom:1px dashed var(--line);padding-bottom:8px}
+.stat:last-child{border-bottom:0;padding-bottom:0}
+.stat dd{margin:0;font:600 18px var(--mono);font-variant-numeric:tabular-nums}
+.stat dd.lvl{font:700 20px var(--pixel);color:var(--p)}
+.stat.cities{flex-direction:column;align-items:flex-start;gap:6px}
+.pips{display:flex;gap:5px;flex-wrap:wrap}
+.pip{width:22px;height:15px;display:block}
+.pip.lost{opacity:.22;filter:grayscale(1)}
+.px{display:block;width:100%;height:100%;image-rendering:pixelated;shape-rendering:crispEdges}
+
+.keys{display:grid;grid-template-columns:auto 1fr;gap:7px 10px;align-items:center;font-size:12.5px;margin:10px 0 0}
+kbd{display:inline-block;min-width:24px;text-align:center;padding:2px 6px;font:600 11px var(--mono);background:var(--panel2);border:1px solid var(--line);border-bottom-width:3px;border-radius:3px;color:var(--text)}
+.toggles{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.tbtn{background:var(--panel2);border:1px solid var(--line);border-radius:3px;padding:5px 9px;font:400 11px var(--pixel);cursor:pointer;letter-spacing:.05em}
+.tbtn[aria-pressed="true"]{background:var(--p);color:var(--ink);border-color:var(--p)}
+
+/* ---------- playfield ---------- */
+.play{display:flex;flex-direction:column;gap:10px;min-width:0}
+.toast{min-height:64px;display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:4px;background:var(--panel);border:1px solid var(--line);font-size:13px}
+.toast::before{content:"";flex:none;width:8px;height:8px;border-radius:1px;background:var(--muted);margin-top:5px}
+.toast .msg{flex:1;min-width:0;line-height:1.55;text-wrap:pretty}
+.toast .pts{font-weight:700;white-space:nowrap}
+.toast.good::before{background:var(--f)} .toast.bad{border-color:var(--bad)} .toast.bad::before{background:var(--bad)}
+.toast.gold{border-color:var(--p)} .toast.gold::before{background:var(--p)}
+.toast b{font-weight:600}
+
+.frame{padding:6px;background:#080a13;border:2px solid var(--line);border-radius:6px;box-shadow:0 0 0 4px var(--panel),0 18px 40px rgba(0,0,0,.45)}
+.screen{position:relative;width:100%;max-width:max(300px,calc((100dvh - 250px) * .75));aspect-ratio:3/4;margin:0 auto;overflow:hidden}
+.screen canvas{display:block;width:100%;height:100%;touch-action:none}
+.screen.shake{animation:shake .32s}
+@keyframes shake{20%{transform:translateX(-6px)}40%{transform:translateX(5px)}60%{transform:translateX(-4px)}80%{transform:translateX(2px)}}
+
+.card{position:absolute;inset:0;z-index:5;display:grid;place-items:center;padding:12px;background:rgba(8,10,19,.8);backdrop-filter:blur(2px)}
+.card .inner{max-width:400px;width:100%;background:var(--panel);border:2px solid var(--line);border-radius:6px;padding:18px 20px;display:flex;flex-direction:column;gap:10px;max-height:100%;overflow:auto}
+.card h2{margin:0;font:700 clamp(16px,3vw,24px)/1.1 var(--pixel);color:var(--p);text-wrap:balance}
+.card p{margin:0;font-size:13px;text-wrap:pretty}
+.card ul{margin:0;padding-left:18px;font-size:12.5px;display:flex;flex-direction:column;gap:4px}
+.card .rule{font:600 12.5px var(--mono);background:var(--panel2);border:1px solid var(--line);border-radius:3px;padding:8px 10px}
+.go{align-self:flex-start;background:var(--p);color:var(--ink);border:0;border-radius:3px;padding:10px 16px;font:700 14px var(--pixel);letter-spacing:.05em;cursor:pointer;
+  box-shadow:inset 0 3px 0 rgba(255,255,255,.4),inset 0 -4px 0 rgba(0,0,0,.25)}
+.go:hover{filter:brightness(1.08)}
+
+.pad{display:none;grid-template-columns:repeat(4,1fr);gap:6px}
+.pad button{background:var(--panel2);border:1px solid var(--line);border-bottom-width:4px;border-radius:5px;padding:11px 0;font:700 18px var(--mono);cursor:pointer;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+.pad button.fireb{grid-column:1 / -1;background:var(--p);color:var(--ink);border-color:#b98a1a;font:700 16px var(--pixel)}
+.pad button.op{color:var(--muted)}
+body.boss .pad button.op{color:var(--p)}
+@media (pointer:coarse),(max-width:1020px){.pad{display:grid}}
+
+/* ---------- right panel ---------- */
+.fmap{display:grid;gap:2px;margin-top:10px;font:600 10px var(--mono);font-variant-numeric:tabular-nums}
+.fmap span{display:grid;place-items:center;color:var(--muted)}
+.fmap i{aspect-ratio:1;border-radius:1px;background:var(--panel2);border:1px solid var(--line)}
+.fmap i.s0{background:var(--s);border-color:var(--s)}
+.fmap i.s1{background:var(--p);border-color:var(--p)}
+.fmap i.s3{background:rgba(111,224,138,.5);border-color:rgba(111,224,138,.5)}
+.fmap i.s4{background:var(--f);border-color:var(--f)}
+.fmap i.live{outline:2px solid var(--orb);outline-offset:-1px;animation:blink .5s steps(2) infinite}
+@keyframes blink{50%{outline-color:transparent}}
+.legend{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:10px;font-size:11.5px;color:var(--muted)}
+.legend span{display:flex;align-items:center;gap:5px}
+.legend i{width:10px;height:10px;border-radius:1px;display:block;border:1px solid var(--line)}
+.note{font-size:12px;color:var(--muted);margin:10px 0 0;text-wrap:pretty}
+.note b{color:var(--text);font-weight:600}
+.slow{margin:10px 0 12px;padding:0;list-style:none;display:flex;flex-direction:column;gap:5px;font-size:12.5px}
+.slow li{display:flex;justify-content:space-between;gap:10px;border-bottom:1px dashed var(--line);padding-bottom:5px}
+.slow li b{font:600 15px var(--mono)}
+.slow li span{color:var(--muted)}
+.slow li.empty{border:0;color:var(--muted)}
+
+#bossPanel{display:none}
+body.boss #bossPanel{display:block}
+body.boss #slowBox{display:none}
+.bossrules{margin:12px 0 0;padding-left:17px;font-size:12.5px;line-height:1.5;color:var(--muted);display:flex;flex-direction:column;gap:7px}
+.bossrules b{color:var(--text);font-weight:600}
+.bossstat{display:flex;gap:18px;margin-top:12px}
+.bossstat div{display:flex;flex-direction:column}
+.bossstat b{font:700 22px var(--mono)}
+
+/* ---------- responsive ---------- */
+@media (max-width:1020px){
+  .stage{grid-template-columns:minmax(0,560px)}
+  .play{order:-1}
+  .hud.left .stats{grid-template-columns:repeat(3,1fr)}
+  .hud.left .stat{flex-direction:column;align-items:flex-start;border-bottom:0;padding-bottom:0}
+  .keysbox{display:none}
+  .screen{max-width:max(260px,calc((100dvh - 330px) * .75))}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+</style>
+
+<div class="app">
+  <header class="top">
+    <div class="logo" aria-hidden="true"><div class="bone"><span>5</span><span>6</span></div></div>
+    <div>
+      <h1><span class="a">Napier's</span> <span class="b">Nightfall</span></h1>
+      <p class="tag">Each missile carries a multiplication fact. <b>Type the product</b> to fire an interceptor at it. Fast answers score more, and the facts you're slow on keep coming back until they're quick.</p>
+    </div>
+  </header>
+
+  <main class="stage">
+    <aside class="hud left">
+      <div class="box">
+        <dl class="stats">
+          <div class="stat"><dt class="lbl">Wave</dt><dd class="lvl" id="hWave">1</dd></div>
+          <div class="stat"><dt class="lbl">Score</dt><dd id="hScore">0</dd></div>
+          <div class="stat"><dt class="lbl">Best</dt><dd id="hBest">0</dd></div>
+          <div class="stat"><dt class="lbl">Streak</dt><dd id="hStreak">0</dd></div>
+          <div class="stat cities"><dt class="lbl">Cities</dt><dd class="pips" id="hCities"></dd></div>
+        </dl>
+      </div>
+      <div class="box keysbox">
+        <div class="lbl">Controls</div>
+        <div class="keys">
+          <span><kbd>0</kbd>–<kbd>9</kbd></span><span>Type a product</span>
+          <span><kbd>Enter</kbd></span><span>Fire now</span>
+          <span><kbd>⌫</kbd></span><span>Fix a typo</span>
+          <span><kbd>X</kbd></span><span>× (boss rounds)</span>
+          <span><kbd>P</kbd></span><span>Pause</span>
+          <span><kbd>M</kbd></span><span>Sound</span>
+        </div>
+        <div class="toggles">
+          <button class="tbtn" id="maxBtn" aria-pressed="true">11s + 12s</button>
+          <button class="tbtn" id="muteBtn" aria-pressed="false">Mute</button>
+        </div>
+      </div>
+    </aside>
+
+    <section class="play">
+      <div class="toast" id="toast" role="status" aria-live="polite"><span class="msg">Press Enter to start.</span></div>
+      <div class="frame">
+        <div class="screen" id="screen">
+          <canvas id="cv" aria-label="Game field"></canvas>
+          <div class="card" id="card" hidden></div>
+        </div>
+      </div>
+      <div class="pad" aria-label="Number pad">
+        <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button><button data-k="back" class="op" aria-label="Backspace">⌫</button>
+        <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button><button data-k="times" class="op" aria-label="Times">×</button>
+        <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button><button data-k="0">0</button>
+        <button data-k="fire" class="fireb">FIRE</button>
+      </div>
+    </section>
+
+    <aside class="hud right">
+      <div class="box">
+        <div class="lbl">Fact map</div>
+        <div class="fmap" id="fmap" aria-label="Times table mastery"></div>
+        <div class="legend">
+          <span><i style="background:var(--panel2)"></i>Not yet</span>
+          <span><i style="background:var(--s);border-color:var(--s)"></i>Shaky</span>
+          <span><i style="background:var(--p);border-color:var(--p)"></i>Learning</span>
+          <span><i style="background:var(--f);border-color:var(--f)"></i>Fluent</span>
+        </div>
+        <p class="note" id="fluentNote"></p>
+      </div>
+      <div class="box" id="slowBox">
+        <div class="lbl">Needs practice</div>
+        <ol class="slow" id="slow"></ol>
+        <button class="tbtn" id="resetBtn">Reset progress</button>
+      </div>
+
+      <div class="box" id="bossPanel">
+        <div class="lbl">Boss &middot; The Splitter</div>
+        <div class="bossstat">
+          <div><span class="lbl">Split</span><b id="bCount">0</b></div>
+          <div><span class="lbl">Boss best</span><b id="bBest">0</b></div>
+        </div>
+        <ul class="bossrules">
+          <li>The warhead carries one number. Type <b>every times-table pair</b> that makes it: <b>4</b>, then <kbd>×</kbd> or <kbd>Space</kbd>, then <b>9</b>.</li>
+          <li><b>4 × 9</b> and <b>9 × 4</b> are the same pair.</li>
+          <li>A wrong pair costs <b>3 seconds</b>. Your cities are safe.</li>
+          <li>Split 3 or more to rebuild a city.</li>
+        </ul>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<script>
+(() => {
+// ---------- constants ----------
+const W = 480, H = 640;
+const C = { ground:'#0b0d18', panel:'#131728', panel2:'#1a1f35', line:'#2a3152', text:'#e4e9ff', muted:'#8a93b8',
+            pink:'#ff5a74', gold:'#ffc53d', blue:'#3fb8ff', green:'#6fe08a', bad:'#ff3b3b', white:'#f2f5ff', ink:'#0b0d18' };
+const PIX = '"Silkscreen","Courier New",monospace', MONO = '"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace';
+const TIMES = '×';
+const GROUND_Y = 592, CITY_X = [46, 106, 166, 314, 374, 434], BAT = { x: 240, y: GROUND_Y - 21 };
+const FAST = 3;                     // seconds: a correct answer faster than this counts toward fluency
+const SHOT_T = .28;                 // interceptor flight time
+const WAVES_PER_BOSS = 2, BOSS_TIME = 45, WH_TOP = 140, WH_LAND = GROUND_Y - 70;
+
+// ---------- helpers ----------
+const rand = (a, b) => a + Math.random() * (b - a);
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const fact = (a, b) => `${a} ${TIMES} ${b}`;
+const key = (a, b) => a <= b ? a + 'x' + b : b + 'x' + a;
+const unkey = k => k.split('x').map(Number);
+function wpick(items, w){
+  let tot = 0; for (const x of w) tot += x;
+  let r = Math.random() * tot;
+  for (let i = 0; i < items.length; i++){ r -= w[i]; if (r <= 0) return items[i]; }
+  return items[items.length - 1];
+}
+// factor pairs of n with both factors from 2 to max, smaller factor first
+function pairsOf(n, max){
+  const r = [];
+  for (let a = 2; a * a <= n; a++) if (n % a === 0 && n / a <= max) r.push([a, n / a]);
+  return r;
+}
+
+// a quick way to rebuild a fact from ones she's more likely to know
+function tip(a, b){
+  const s = Math.min(a, b), l = Math.max(a, b), p = a * b;
+  const has = n => s === n || l === n, o = n => s === n ? l : s;
+  if (s === 7 && l === 8) return `5, 6, 7, 8: <b>56 = 7 × 8</b>.`;
+  if (s === 3 && l === 4) return `1, 2, 3, 4: <b>12 = 3 × 4</b>.`;
+  if (has(2))  return `Times 2 is doubling: ${o(2)} + ${o(2)} = <b>${p}</b>.`;
+  if (has(10)) return `Times 10: put a zero after ${o(10)} to get <b>${p}</b>.`;
+  if (s === l) return `${s} × ${s} = <b>${p}</b>. Squares come up all the time in algebra, so they're worth knowing cold.`;
+  if (has(5))  return `Times 5 is half of times 10: 10 × ${o(5)} = ${10 * o(5)}, and half of that is <b>${p}</b>.`;
+  if (has(11) && o(11) <= 9) return `11 × a single digit repeats the digit: <b>${p}</b>.`;
+  if (has(9))  return `10 × ${o(9)} = ${10 * o(9)}, take away one ${o(9)}: <b>${p}</b>.`;
+  if (has(11)) return `10 × ${o(11)} = ${10 * o(11)}, plus one more ${o(11)}: <b>${p}</b>.`;
+  if (has(12)) return `10 × ${o(12)} + 2 × ${o(12)} = ${10 * o(12)} + ${2 * o(12)} = <b>${p}</b>.`;
+  if (has(3))  return `Double ${o(3)}, then add one more: ${2 * o(3)} + ${o(3)} = <b>${p}</b>.`;
+  if (has(4))  return `Double, then double again: ${o(4)} → ${2 * o(4)} → <b>${p}</b>.`;
+  if (has(6))  return `5 × ${o(6)} = ${5 * o(6)}, plus one more ${o(6)}: <b>${p}</b>.`;
+  if (has(8))  return `Double three times: ${o(8)} → ${2 * o(8)} → ${4 * o(8)} → <b>${p}</b>.`;
+  return `5 × ${o(7)} + 2 × ${o(7)} = ${5 * o(7)} + ${2 * o(7)} = <b>${p}</b>.`;
+}
+
+// ---------- pixel sprites ----------
+const CITY_MAP = [
+  ".....t.......","....bbb......","....bwb..ppp.",".gg.bbb..pwp.",".gw.bwb..ppp.",
+  "ggg.bbbpppwpp","gwgpbwbppppwp","ggggbbbpwpppp","ggggbbbpppppp"];
+const CITY_COL = { t:'#ff5a74', b:'#3fb8ff', p:'#5a6aa8', g:'#2f7fb8', w:'#ffc53d' };
+const RUBBLE_MAP = [".....r.......","..r.rrr..e...",".rrrrrrrrrr..","rrrrrerrrrrrr"];
+const RUBBLE_COL = { r:'#3a4166', e:'#ff5a74' };
+const BAT_MAP = [".......w.......",".......w.......","......ggg......",".....ggggg.....","...ggggggggg...","..ggggggggggg..","ggggggggggggggg"];
+const BAT_COL = { g:'#ffc53d', w:'#f2f5ff' };
+// nose down
+const WARHEAD_MAP = [
+  ".ggg.....ggg.","..ggg...ggg..","...ggg.ggg...","....ppppp....","...ppwpppp...","..pppwppppp..","..pppwppppp..",
+  "..pppwppppp..","..pppwppppp..","..pppwppppp..","..pppwppppp..","...ppwpppp...","....ppppp....",".....ppp.....","......p......"];
+const WARHEAD_COL = { p:'#ff5a74', w:'#ffb3c0', g:'#ffc53d' };
+function drawMap(map, pal, x, y, s){
+  for (let r = 0; r < map.length; r++) for (let c = 0; c < map[r].length; c++){
+    const ch = map[r][c]; if (ch === '.') continue;
+    ctx.fillStyle = pal[ch]; ctx.fillRect(x + c * s, y + r * s, s, s);
+  }
+}
+function svgSprite(map, pal){
+  let r = '';
+  map.forEach((row, y) => [...row].forEach((ch, x) => { if (ch !== '.') r += `<rect x="${x}" y="${y}" width="1" height="1" fill="${pal[ch]}"/>`; }));
+  return `<svg class="px" viewBox="0 0 ${map[0].length} ${map.length}" aria-hidden="true">${r}</svg>`;
+}
+
+// ---------- state ----------
+const S = { mode:'title', wave:0, score:0, best:0, streak:0, muted:false, max:12, pausedFrom:'play', clock:0, banner:0, bossBest:0 };
+let facts = {};   // 'axb' -> { n, ok, miss, box (0–4), rt (smoothed seconds) }
+try {
+  S.best = +localStorage.getItem('nn-best') || 0;
+  S.bossBest = +localStorage.getItem('nn-boss-best') || 0;
+  S.muted = localStorage.getItem('nn-muted') === '1';
+  S.max = localStorage.getItem('nn-max') === '10' ? 10 : 12;
+  facts = JSON.parse(localStorage.getItem('nn-facts') || '{}') || {};
+} catch {}
+function saveFacts(){ try { localStorage.setItem('nn-facts', JSON.stringify(facts)); } catch {} }
+function saveBest(){ if (S.score > S.best){ S.best = S.score; try { localStorage.setItem('nn-best', S.best); } catch {} } }
+
+let cities = [true, true, true, true, true, true];
+let missiles = [], shots = [], booms = [], parts = [], recent = [], wv = null, spawnT = 0, boss = null;
+let buf = '', pend = 0, jam = 0, lastAct = 0, cardAt = 0;
+
+// ---------- DOM ----------
+const $ = id => document.getElementById(id);
+const cv = $('cv'), ctx = cv.getContext('2d'), screen = $('screen'), card = $('card'), toast = $('toast');
+let scale = 1;
+function fitCanvas(){
+  const r = screen.getBoundingClientRect();
+  if (!r.width) return;
+  const dpr = Math.min(3, window.devicePixelRatio || 1);
+  cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr);
+  scale = cv.width / W;
+  ctx.setTransform(scale, 0, 0, scale, 0, 0);
+  ctx.imageSmoothingEnabled = false;
+}
+
+// ---------- sound ----------
+let actx = null;
+function tone(freq, dur = .08, type = 'square', vol = .045, slide = 0){
+  if (S.muted) return;
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    const t0 = actx.currentTime, o = actx.createOscillator(), g = actx.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, t0);
+    if (slide) o.frequency.exponentialRampToValueAtTime(freq * slide, t0 + dur);
+    g.gain.setValueAtTime(vol, t0); g.gain.exponentialRampToValueAtTime(.0001, t0 + dur);
+    o.connect(g).connect(actx.destination); o.start(t0); o.stop(t0 + dur + .02);
+  } catch {}
+}
+const arpeggio = (notes, gap = 70) => notes.forEach((f, i) => setTimeout(() => tone(f, .12, 'square', .04), i * gap));
+
+// ---------- fact tracking ----------
+function factList(){
+  const r = [];
+  for (let a = 2; a <= S.max; a++) for (let b = a; b <= S.max; b++) r.push([a, b]);
+  return r;
+}
+const boxOf = (a, b) => { const f = facts[key(a, b)]; return f && f.n ? f.box : -1; };
+const isFluent = (a, b) => boxOf(a, b) >= 3;
+// ok: correct, with rt in seconds. A fast answer climbs a box; a slow one can't sit above "learning".
+// miss: a wrong answer aimed at it, or it reached a city.
+function record(a, b, kind, rt){
+  const k = key(a, b), f = facts[k] || (facts[k] = { n:0, ok:0, miss:0, box:0, rt:0 });
+  const was = f.n ? f.box : -1;
+  f.n++;
+  if (kind === 'ok'){
+    f.ok++;
+    f.rt = +(f.rt ? f.rt * .6 + rt * .4 : rt).toFixed(2);
+    f.box = rt < FAST ? Math.min(4, f.box + 1) : f.box >= 3 ? f.box - 1 : Math.max(1, f.box);
+  } else {
+    f.miss++;
+    f.box = Math.max(0, f.box - 1);
+  }
+  saveFacts();
+  return { was, now: f.box };
+}
+// shaky and unseen facts come often, fluent ones now and then as review
+const WEIGHT = [6, 4, 3, 1.2, .5], UNSEEN = 4;
+function nextFact(){
+  const live = missiles.filter(m => m.alive);
+  const busyK = new Set(live.map(m => key(m.a, m.b)).concat(recent));
+  const busyP = new Set(live.map(m => m.ans));
+  let pool = factList().filter(([a, b]) => !busyK.has(key(a, b)) && !busyP.has(a * b));
+  if (!pool.length) pool = factList();
+  const [a, b] = wpick(pool, pool.map(([a, b]) => { const x = boxOf(a, b); return x < 0 ? UNSEEN : WEIGHT[x]; }));
+  recent.push(key(a, b)); if (recent.length > 5) recent.shift();
+  return Math.random() < .5 ? [a, b] : [b, a];
+}
+
+// ---------- HUD ----------
+function say(html, kind = ''){ toast.className = 'toast' + (kind ? ' ' + kind : ''); toast.innerHTML = `<span class="msg">${html}</span>`; }
+function showCard(html){ card.innerHTML = `<div class="inner">${html}</div>`; card.hidden = false; cardAt = performance.now(); const b = card.querySelector('.go'); if (b) b.focus({ preventScroll:true }); }
+function hideCard(){ card.hidden = true; card.innerHTML = ''; }
+const bossish = () => ['bossintro','boss','bossclear'].includes(S.mode) || (S.mode === 'paused' && S.pausedFrom === 'boss');
+const cityPip = svgSprite(CITY_MAP, CITY_COL);
+function renderHUD(){
+  document.body.classList.toggle('boss', bossish());
+  $('hWave').textContent = Math.max(1, S.wave);
+  $('hScore').textContent = S.score.toLocaleString();
+  $('hBest').textContent = S.best.toLocaleString();
+  $('hStreak').textContent = S.streak;
+  $('hCities').innerHTML = cities.map(c => `<span class="pip${c ? '' : ' lost'}">${cityPip}</span>`).join('');
+  $('hCities').setAttribute('aria-label', cities.filter(Boolean).length + ' of 6');
+  $('maxBtn').setAttribute('aria-pressed', S.max === 12);
+  $('muteBtn').setAttribute('aria-pressed', S.muted);
+  $('bCount').textContent = boss ? boss.count : 0;
+  $('bBest').textContent = S.bossBest;
+}
+function renderMap(){
+  const n = S.max - 1, live = new Set(missiles.filter(m => m.alive).map(m => key(m.a, m.b)));
+  const m = $('fmap');
+  m.style.gridTemplateColumns = `repeat(${n + 1}, 1fr)`;
+  let h = '<span></span>';
+  for (let b = 2; b <= S.max; b++) h += `<span>${b}</span>`;
+  for (let a = 2; a <= S.max; a++){
+    h += `<span>${a}</span>`;
+    for (let b = 2; b <= S.max; b++){
+      const x = boxOf(a, b), f = facts[key(a, b)];
+      const cls = (x < 0 ? '' : x === 0 ? 's0' : x <= 2 ? 's1' : x === 3 ? 's3' : 's4') + (live.has(key(a, b)) ? ' live' : '');
+      const t = x < 0 ? `${fact(a, b)}: not seen yet` : `${fact(a, b)}: ${f.ok} right, ${f.miss} missed${f.rt ? `, about ${f.rt.toFixed(1)} s` : ''}`;
+      h += `<i class="${cls}" title="${t}"></i>`;
+    }
+  }
+  m.innerHTML = h;
+  const all = factList(), fl = all.filter(([a, b]) => isFluent(a, b)).length;
+  $('fluentNote').innerHTML = `<b>${fl}</b> of ${all.length} facts fluent. Fluent means right in under ${FAST} seconds, several times running. 7 × 8 and 8 × 7 count as one fact.`;
+  const weak = all.filter(([a, b]) => { const x = boxOf(a, b); return x >= 0 && x < 3; })
+    .map(([a, b]) => ({ a, b, f: facts[key(a, b)] }))
+    .sort((p, q) => p.f.box - q.f.box || q.f.miss - p.f.miss || (q.f.rt || 99) - (p.f.rt || 99))
+    .slice(0, 6);
+  $('slow').innerHTML = weak.length
+    ? weak.map(({ a, b, f }) => `<li><b>${fact(a, b)}</b><span>${[f.miss ? `missed ${f.miss}` : '', f.rt ? `${f.rt.toFixed(1)} s` : ''].filter(Boolean).join(' · ')}</span></li>`).join('')
+    : `<li class="empty">${Object.keys(facts).length ? 'Every fact you\'ve seen is fluent. Nice.' : 'Nothing yet. Play a wave and the facts that need work will show up here.'}</li>`;
+}
+function shake(){ screen.classList.remove('shake'); void screen.offsetWidth; screen.classList.add('shake'); setTimeout(() => screen.classList.remove('shake'), 340); }
+
+// ---------- effects ----------
+function burst(x, y, color, n = 16, sp = 160){
+  for (let i = 0; i < n; i++){
+    const a = rand(0, Math.PI * 2), v = rand(sp * .3, sp);
+    parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: rand(.35, .7), max: .7, c: color });
+  }
+}
+const boom = (x, y, r = 30, dur = .6) => booms.push({ x, y, r, dur, t: 0 });
+function shoot(x1, y1, onHit){
+  shots.push({ x0: BAT.x, y0: BAT.y - 4, x1, y1, t: 0, dur: SHOT_T, onHit });
+  tone(520, .12, 'square', .03, 2);
+}
+function stepShots(dt){
+  for (const s of shots){ s.t += dt; if (s.t >= s.dur){ s.done = true; s.onHit(); } }
+  shots = shots.filter(s => !s.done);
+}
+
+// ---------- waves ----------
+const fallTime = w => Math.max(6, 15 * Math.pow(.91, w - 1));
+const maxLive  = w => Math.min(4, 1 + Math.ceil(w / 2));
+const waveSize = w => Math.min(24, 10 + 2 * (w - 1));
+function spawn(){
+  const alive = [0,1,2,3,4,5].filter(i => cities[i]);
+  if (!alive.length) return;
+  const ci = pick(alive), tx = CITY_X[ci];
+  // start well away from missiles that just came in, so the labels don't pile up
+  let sx = tx, gap = -1;
+  for (let t = 0; t < 10; t++){
+    const x = clamp(tx + rand(-150, 150), 40, W - 40);
+    const g = Math.min(999, ...missiles.filter(m => m.alive && m.p < .4).map(m => Math.abs(m.x - x)));
+    if (g > gap){ gap = g; sx = x; }
+  }
+  const [a, b] = nextFact();
+  missiles.push({ a, b, ans: a * b, sx, sy: -14, tx, ty: GROUND_Y - 12, city: ci, p: 0, x: sx, y: -14,
+                  dur: fallTime(S.wave) * rand(.92, 1.08), born: S.clock, alive: true, locked: false, revealed: false });
+  wv.spawned++;
+  renderMap();
+}
+function stepMissile(m, dt){
+  m.p += dt / m.dur;
+  if (m.locked) m.p = Math.min(m.p, .99);       // an interceptor is on its way; it always gets there first
+  m.x = m.sx + (m.tx - m.sx) * m.p; m.y = m.sy + (m.ty - m.sy) * m.p;
+  if (m.p >= 1) cityHit(m);
+}
+function cityHit(m){
+  m.alive = false;
+  boom(m.x, m.y, 46, .9); burst(m.x, m.y, C.pink, 26, 220);
+  if (cities[m.city]){ cities[m.city] = false; tone(80, .5, 'sawtooth', .07, .4); } else tone(110, .3, 'sawtooth', .05, .5);
+  shake();
+  if (!m.revealed) record(m.a, m.b, 'miss');
+  wv.lost++; S.streak = 0;
+  say(`<b>${fact(m.a, m.b)} = ${m.ans}</b> got through. ${tip(m.a, m.b)}`, 'bad');
+  if (!cities.some(Boolean)) gameOver();
+  renderHUD(); renderMap();
+}
+function nextWave(){
+  S.wave++;
+  wv = { total: waveSize(S.wave), spawned: 0, hits: 0, fast: 0, rts: [], lost: 0, wrong: 0, fluent: [] };
+  missiles = []; shots = []; boss = null; buf = ''; pend = 0; jam = 0;
+  S.banner = 1.8; spawnT = 0; S.mode = 'play'; hideCard();
+  say(`<b>Wave ${S.wave}.</b> ${wv.total} missiles, up to ${maxLive(S.wave)} at a time. Type a product to fire.`, 'gold');
+  renderHUD(); renderMap();
+}
+function start(){
+  Object.assign(S, { wave: 0, score: 0, streak: 0, clock: 0 });
+  cities = [true, true, true, true, true, true];
+  boss = null; recent = []; lastAct = 0; parts = []; booms = [];
+  nextWave();
+  arpeggio([262, 330, 392, 523]);
+}
+function updatePlay(dt){
+  if (S.banner > 0){ S.banner -= dt; return; }
+  if (pend > 0){ pend -= dt; if (pend <= 0){ pend = 0; if (buf) evaluate(true); } }
+  const live = missiles.filter(m => m.alive).length;
+  spawnT -= dt;
+  if (wv.spawned < wv.total && live < maxLive(S.wave) && spawnT <= 0){
+    spawn();
+    spawnT = fallTime(S.wave) / maxLive(S.wave) * rand(.75, 1.15);
+  } else if (!live && spawnT > .6) spawnT = .6;
+  for (const m of missiles) if (m.alive) stepMissile(m, dt);
+  if (S.mode !== 'play') return;
+  stepShots(dt);
+  missiles = missiles.filter(m => m.alive);
+  if (wv.spawned >= wv.total && !missiles.length && !shots.length) waveClear();
+}
+function waveClear(){
+  const alive = cities.filter(Boolean).length, bonus = 25 * S.wave * alive;
+  S.score += bonus; saveBest();
+  const dead = [0,1,2,3,4,5].filter(i => !cities[i]);
+  if (dead.length) cities[pick(dead)] = true;
+  S.mode = 'waveclear'; renderHUD();
+  arpeggio([392, 523, 659, 784, 1047], 80);
+  const avg = wv.rts.length ? (wv.rts.reduce((x, y) => x + y, 0) / wv.rts.length).toFixed(1) + ' s' : '–';
+  const bossNext = S.wave % WAVES_PER_BOSS === 0;
+  showCard(`<h2>Wave ${S.wave} clear</h2>
+    <p class="rule">Hits ${wv.hits} · Under ${FAST} s: ${wv.fast} · Average ${avg}</p>
+    ${wv.fluent.length ? `<p>Newly fluent: <b>${wv.fluent.map(k => fact(...unkey(k))).join(', ')}</b></p>` : ''}
+    ${dead.length ? '<p>The engineers rebuilt a city overnight.</p>' : ''}
+    <p class="rule">City bonus +${bonus.toLocaleString()} · Score ${S.score.toLocaleString()}</p>
+    ${bossNext ? `<p>Something big is coming before wave ${S.wave + 1}: <b>The Splitter</b>. Your cities are safe from it.</p>` : ''}
+    <button class="go" data-act="${bossNext ? 'boss' : 'next'}">${bossNext ? 'Face the Splitter' : 'Next wave'}</button>`);
+}
+function gameOver(){
+  S.mode = 'over'; buf = ''; saveBest(); renderMap();
+  burst(BAT.x, BAT.y, C.gold, 30, 220);
+  const all = factList(), fl = all.filter(([a, b]) => isFluent(a, b)).length;
+  const weak = [...$('slow').querySelectorAll('li b')].slice(0, 4).map(b => b.textContent);
+  cardAt = performance.now() + 900;
+  setTimeout(() => S.mode === 'over' && showCard(`<h2>Nightfall</h2>
+    <p>The last city fell during wave ${S.wave}.</p>
+    <p class="rule">Score ${S.score.toLocaleString()} · Best ${S.best.toLocaleString()}</p>
+    <p><b>${fl} of ${all.length}</b> facts are fluent.${weak.length ? ` Worth a look before next time: <b>${weak.join(', ')}</b>.` : ''}</p>
+    <button class="go" data-act="start">Play again</button>`), 900);
+}
+
+// ---------- answering ----------
+const targets = () => missiles.filter(m => m.alive && !m.locked);
+// commit as soon as the typed number can only mean one thing; if it's also the start of another
+// answer on screen (4 vs 42), give her a moment to keep typing
+function evaluate(force){
+  const T = targets(), n = +buf;
+  const hit = T.filter(m => m.ans === n), longer = T.filter(m => m.ans !== n && String(m.ans).startsWith(buf));
+  if (hit.length && (force || !longer.length)) return answer(hit);
+  if (hit.length){ pend = .7; return; }
+  if (longer.length && !force) return;
+  wrong(n);
+}
+function answer(list){
+  const m = list.reduce((x, y) => y.p > x.p ? y : x);
+  const rt = S.clock - Math.max(m.born, lastAct);
+  lastAct = S.clock; buf = ''; pend = 0;
+  m.locked = true;
+  const p2 = Math.min(.99, m.p + SHOT_T / m.dur);
+  shoot(m.sx + (m.tx - m.sx) * p2, m.sy + (m.ty - m.sy) * p2, () => {
+    m.alive = false;
+    boom(m.x, m.y); burst(m.x, m.y, C.gold, 14, 140);
+    tone(150, .22, 'sawtooth', .04, .4);
+    renderMap();
+  });
+  S.streak++; wv.hits++;
+  const w = S.wave, fast = rt < FAST;
+  const pts = 10 * w + (fast ? 10 * w : 0) + Math.round((1 - m.p) * 10 * w) + Math.min(S.streak, 10) * w;
+  S.score += pts; saveBest();
+  let msg, kind = 'good';
+  if (m.revealed){
+    msg = `<b>${fact(m.a, m.b)} = ${m.ans}</b>. Hold on to that one; it'll be back.`;
+  } else {
+    wv.rts.push(rt); if (fast) wv.fast++;
+    const r = record(m.a, m.b, 'ok', rt), newly = r.was < 3 && r.now >= 3;
+    if (newly){ wv.fluent.push(key(m.a, m.b)); kind = 'gold'; setTimeout(() => arpeggio([784, 988, 1175], 60), 250); }
+    msg = `<b>${fact(m.a, m.b)} = ${m.ans}</b> in ${rt.toFixed(1)} s. ${newly ? `<b>${fact(m.a, m.b)} is now fluent!</b>` : fast ? 'Fluent speed.' : `Right! Next time aim for under ${FAST} seconds.`}`;
+  }
+  say(`${msg} <span class="pts" style="color:var(--p)">+${pts}</span>`, kind);
+  renderHUD(); renderMap();
+}
+function wrong(n){
+  const T = targets(), s = String(n);
+  buf = ''; pend = 0; jam = .8; lastAct = S.clock; S.streak = 0; wv.wrong++;
+  tone(150, .2, 'square', .05, .7);
+  // guess which missile she meant: most leading digits in common, then nearest value, then lowest on screen
+  const pre = m => { const t = String(m.ans); let i = 0; while (i < t.length && i < s.length && t[i] === s[i]) i++; return i; };
+  let g = null, gs = null;
+  for (const m of T){
+    const sc = [pre(m), -Math.abs(m.ans - n), m.p];
+    if (!g || sc[0] > gs[0] || (sc[0] === gs[0] && (sc[1] > gs[1] || (sc[1] === gs[1] && sc[2] > gs[2])))){ g = m; gs = sc; }
+  }
+  if (g && !(gs[0] >= 1 || -gs[1] <= 12 || T.length === 1)) g = null;
+  const ps = pairsOf(n, S.max);
+  let msg = `<b>${n}</b> doesn't match any missile.${ps.length ? ` (${n} is ${ps.map(p => fact(...p)).join(' or ')}.)` : ''}`;
+  if (g){
+    if (!g.revealed){ record(g.a, g.b, 'miss'); g.revealed = true; }
+    msg += ` Were you aiming at <b>${fact(g.a, g.b)}</b>? ${tip(g.a, g.b)}`;
+  }
+  say(msg, 'bad');
+  renderHUD(); renderMap();
+}
+
+// ---------- boss: The Splitter ----------
+function bossIntro(){
+  S.mode = 'bossintro'; boss = null; missiles = []; shots = []; buf = ''; renderHUD(); renderMap();
+  showCard(`<h2>Boss: The Splitter</h2>
+    <p>A warhead drops with one number painted on it. Split it into <b>every times-table pair</b> that makes it, and it blows apart.</p>
+    <ul>
+      <li>For 36, type <b>4</b>, then <kbd>×</kbd> or <kbd>Space</kbd>, then <b>9</b>. Then find 3 × 12 and 6 × 6.</li>
+      <li>The boxes at the top show how many pairs there are.</li>
+      <li><b>${BOSS_TIME} seconds.</b> A wrong pair costs 3 of them. Your cities are safe.</li>
+      <li>Split 3 or more warheads to rebuild a city.</li>
+    </ul>
+    <p class="rule">This is factoring. To factor x² + 13x + 36, you need the pair of 36 that adds up to 13.</p>
+    <button class="go" data-act="beginboss">Bring it on</button>`);
+}
+const warheadFall = () => Math.max(14, 26 - 2 * (S.wave / WAVES_PER_BOSS - 1));
+function bossProblem(){
+  const cand = [], w = [];
+  for (let n = 12; n <= S.max * S.max; n++){
+    const ps = pairsOf(n, S.max);
+    if (!ps.length || (boss && boss.used.has(n))) continue;
+    cand.push({ P: n, pairs: ps }); w.push(ps.length >= 2 ? 3 : 1);
+  }
+  return wpick(cand, w);
+}
+function nextWarhead(){
+  boss.prob = bossProblem(); boss.used.add(boss.prob.P);
+  boss.found = []; boss.y = WH_TOP;
+}
+function beginBoss(){
+  boss = { t: BOSS_TIME, count: 0, used: new Set(), prob: null, found: [], y: WH_TOP };
+  nextWarhead();
+  shots = []; buf = ''; jam = 0; S.mode = 'boss'; hideCard();
+  say(`<b>The Splitter.</b> Type every pair that makes <b>${boss.prob.P}</b>: a number, <kbd>×</kbd>, another number.`, 'gold');
+  arpeggio([330, 392, 494, 659], 70); renderHUD();
+}
+function updateBoss(dt){
+  stepShots(dt);
+  if (S.mode !== 'boss') return;
+  boss.t -= dt;
+  if (boss.t <= 0){ boss.t = 0; return endBoss('time'); }
+  boss.y += (WH_LAND - WH_TOP) / warheadFall() * dt;
+  if (boss.y >= WH_LAND) endBoss('landed');
+}
+function bossKey(k){
+  if (jam > 0) return;
+  const parts = buf.split(TIMES);
+  if (k === 'x'){ if (parts.length === 1 && parts[0]) buf += TIMES; return; }
+  if (parts.length === 1){ if (parts[0].length < 2 && !(parts[0] === '' && k === '0')) buf += k; return; }
+  if (parts[1].length >= 2) return;
+  buf += k; checkPair(false);
+}
+function checkPair(force){
+  const parts = buf.split(TIMES), P = boss.prob.P;
+  if (parts.length < 2 || parts[1] === ''){
+    if (force && buf) say(`Type both numbers of the pair, like <b>4 × 9</b>: the first number, then <kbd>×</kbd> or <kbd>Space</kbd>, then the second.`);
+    return;
+  }
+  const a = +parts[0], b = +parts[1];
+  if (a * b === P) return goodPair(a, b);
+  // 3 × 1 might still become 3 × 12; 4 × 1 can't become anything that makes 36
+  if (!force && parts[1].length < 2 && b !== 0 && a * b * 10 <= P) return;
+  badPair(a, b);
+}
+function goodPair(a, b){
+  const s = Math.min(a, b), l = Math.max(a, b), P = boss.prob.P, pairs = boss.prob.pairs;
+  buf = '';
+  if (s === 1) return say(`1 × ${P} always works, so it doesn't count here. Look for factors from 2 to ${S.max}.`);
+  if (l > S.max) return say(`Yes, ${fact(s, l)} = ${P}. This round only wants times-table factors, 2 to ${S.max}.`);
+  const left = () => pairs.length - boss.found.length;
+  if (boss.found.some(f => f[0] === s)) return say(`You already have ${fact(s, l)}. ${left()} more to find.`);
+  boss.found.push([s, l]);
+  const pts = 20 * S.wave; S.score += pts; saveBest();
+  const hx = W / 2, hy = boss.y + 30;
+  shoot(hx, hy, () => { boom(hx, hy, 22, .45); burst(hx, hy, C.gold, 10, 120); });
+  if (!left()){
+    boss.count++;
+    const bonus = 30 * S.wave * pairs.length; S.score += bonus; saveBest();
+    const all = pairs.map(p => fact(...p)).join(' = ');
+    setTimeout(() => { boom(hx, hy, 60, .9); burst(hx, hy, C.pink, 30, 240); tone(90, .45, 'sawtooth', .06, .4); }, SHOT_T * 1000);
+    say(`<b>${P} = ${all}.</b> Split! <span class="pts" style="color:var(--p)">+${pts + bonus}</span>`, 'gold');
+    arpeggio([523, 659, 784, 1047], 60);
+    nextWarhead();
+  } else {
+    say(`<b>${fact(s, l)} = ${P}.</b> ${left()} more to find. <span class="pts" style="color:var(--p)">+${pts}</span>`, 'good');
+    tone(660, .09, 'square', .045, 1.5);
+  }
+  renderHUD();
+}
+function badPair(a, b){
+  const P = boss.prob.P;
+  buf = ''; jam = .6;
+  boss.t = Math.max(0, boss.t - 3);
+  shake(); tone(110, .3, 'sawtooth', .06, .5);
+  say(`${fact(a, b)} = ${a * b}, not ${P}. <span class="pts" style="color:var(--bad)">−3 s</span>`, 'bad');
+}
+function endBoss(why){
+  const bs = boss, p = bs.prob;
+  S.mode = 'bossclear'; buf = ''; shots = [];
+  if (why === 'landed'){ boom(W / 2, WH_LAND + 40, 60, 1); burst(W / 2, WH_LAND + 40, C.pink, 30, 220); tone(80, .5, 'sawtooth', .07, .4); }
+  const dead = [0,1,2,3,4,5].filter(i => !cities[i]), rebuilt = bs.count >= 3 && dead.length;
+  if (rebuilt) cities[pick(dead)] = true;
+  const newBest = bs.count > S.bossBest;
+  if (newBest){ S.bossBest = bs.count; try { localStorage.setItem('nn-boss-best', S.bossBest); } catch {} }
+  if (bs.count >= 3) arpeggio([523, 659, 784, 1047, 1319], 80);
+  renderHUD();
+  const missing = p.pairs.filter(q => !bs.found.some(f => f[0] === q[0]));
+  showCard(`<h2>${bs.count >= 3 ? 'Splitter defeated' : why === 'landed' ? 'It landed' : 'Time\'s up'}</h2>
+    ${why === 'landed' ? '<p>The warhead came down in an empty field. No cities were hurt.</p>' : ''}
+    <p>The last one: <b>${p.P} = ${p.pairs.map(q => fact(...q)).join(' = ')}</b>${missing.length && missing.length < p.pairs.length ? `. You were missing ${missing.map(q => fact(...q)).join(' and ')}` : ''}.</p>
+    <p class="rule">Split ${bs.count}${newBest ? ' · new boss best!' : ` · boss best ${S.bossBest}`}${rebuilt ? ' · a city rebuilt' : ''} · Score ${S.score.toLocaleString()}</p>
+    <button class="go" data-act="next">On to wave ${S.wave + 1}</button>`);
+  say(`The Splitter round is over. You split <b>${bs.count}</b>.`, 'gold');
+}
+
+// ---------- pause / toggles ----------
+function pause(){
+  if (S.mode === 'play' || S.mode === 'boss'){
+    S.pausedFrom = S.mode; S.mode = 'paused';
+    showCard(`<h2>Paused</h2><p>${S.pausedFrom === 'boss' ? 'The clock is stopped.' : 'The missiles are holding in the sky.'}</p><button class="go" data-act="resume">Resume</button>`);
+    renderHUD();
+  } else if (S.mode === 'paused'){
+    S.mode = S.pausedFrom; hideCard(); renderHUD();
+  }
+}
+function toggleMute(){ S.muted = !S.muted; try { localStorage.setItem('nn-muted', S.muted ? '1' : '0'); } catch {} renderHUD(); }
+function toggleMax(){ S.max = S.max === 12 ? 10 : 12; try { localStorage.setItem('nn-max', S.max); } catch {} renderHUD(); renderMap(); }
+function resetProgress(){
+  if (!confirm('Erase the fact map and start tracking every fact from scratch?')) return;
+  facts = {}; saveFacts(); renderMap();
+}
+function typeDigit(d){
+  if (S.mode === 'boss') return bossKey(d);
+  if (S.mode !== 'play' || S.banner > 0 || jam > 0) return;
+  if (buf.length >= 3 || (buf === '' && d === '0')) return;
+  buf += d; pend = 0; evaluate(false);
+}
+function commit(){
+  if (S.mode === 'boss') return checkPair(true);
+  if (S.mode === 'play' && buf && jam <= 0) evaluate(true);
+}
+function back(){ if (jam <= 0){ buf = buf.slice(0, -1); pend = 0; } }
+// the primary button on a card, if the card has been up long enough not to be skipped by a held key
+function primary(){
+  if (performance.now() - cardAt < 450) return true;
+  switch (S.mode){
+    case 'title': case 'over': start(); return true;
+    case 'waveclear': (S.wave % WAVES_PER_BOSS === 0 ? bossIntro : nextWave)(); return true;
+    case 'bossintro': beginBoss(); return true;
+    case 'bossclear': nextWave(); return true;
+    case 'paused': pause(); return true;
+  }
+  return false;
+}
+
+// ---------- input ----------
+document.addEventListener('keydown', e => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const k = e.key, live = S.mode === 'play' || S.mode === 'boss';
+  if ([' ', 'Enter', 'Backspace'].includes(k)) e.preventDefault();
+  if (/^[0-9]$/.test(k)){ if (live) typeDigit(k); return; }
+  if (k === 'Backspace'){ if (live) back(); return; }
+  if (k === 'Enter' || k === ' '){
+    if (e.repeat) return;
+    if (S.mode === 'boss' && k === ' ') return bossKey('x');
+    if (live) return commit();
+    return void primary();
+  }
+  switch (k){
+    case 'x': case 'X': case '*': if (S.mode === 'boss') bossKey('x'); break;
+    case 'p': case 'P': case 'Escape': pause(); break;
+    case 'm': case 'M': toggleMute(); break;
+  }
+});
+card.addEventListener('click', e => {
+  const b = e.target.closest('[data-act]'); if (!b) return;
+  b.blur();
+  ({ start, next: nextWave, boss: bossIntro, beginboss: beginBoss, resume: pause })[b.dataset.act]();
+});
+document.querySelectorAll('.pad button').forEach(b => {
+  const k = b.dataset.k;
+  b.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    const live = S.mode === 'play' || S.mode === 'boss';
+    if (k === 'fire') return void (live ? commit() : primary());
+    if (!live) return;
+    if (k === 'back') back();
+    else if (k === 'times'){ if (S.mode === 'boss') bossKey('x'); }
+    else typeDigit(k);
+  });
+});
+$('maxBtn').addEventListener('click', e => { toggleMax(); e.currentTarget.blur(); });
+$('muteBtn').addEventListener('click', e => { toggleMute(); e.currentTarget.blur(); });
+$('resetBtn').addEventListener('click', e => { e.currentTarget.blur(); resetProgress(); });
+window.addEventListener('blur', () => { if (S.mode === 'play' || S.mode === 'boss') pause(); });
+
+// ---------- drawing ----------
+function pill(text, x, y, border, size = 18, fill = C.panel, color = C.text){
+  ctx.font = `700 ${size}px ${MONO}`;
+  const w = Math.max(30, ctx.measureText(text).width + 14), h = size + 8;
+  x = clamp(x, w / 2 + 2, W - w / 2 - 2);
+  ctx.fillStyle = fill; ctx.fillRect(x - w / 2, y - h / 2, w, h);
+  ctx.strokeStyle = border; ctx.lineWidth = 2; ctx.strokeRect(x - w / 2 + 1, y - h / 2 + 1, w - 2, h - 2);
+  ctx.fillStyle = color; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(text, x, y + 1);
+}
+const stars = Array.from({ length: 70 }, () => ({ x: rand(0, W), y: rand(0, 470), c: pick(['#8a93b8','#3fb8ff','#ffc53d','#e4e9ff']), ph: rand(0, 6) }));
+let sky = null;
+function drawSky(t){
+  if (!sky){ sky = ctx.createLinearGradient(0, 0, 0, GROUND_Y); sky.addColorStop(0, C.ground); sky.addColorStop(1, '#1d1640'); }
+  ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+  for (const s of stars){
+    ctx.globalAlpha = .4 + .4 * Math.sin(t * 2 + s.ph);
+    ctx.fillStyle = s.c; ctx.fillRect(Math.round(s.x), Math.round(s.y), 2, 2);
+  }
+  ctx.globalAlpha = 1;
+  // a crescent moon
+  ctx.fillStyle = '#f2f5ff'; ctx.beginPath(); ctx.arc(408, 78, 20, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#100f22'; ctx.beginPath(); ctx.arc(398, 72, 18, 0, Math.PI * 2); ctx.fill();
+}
+function drawGround(){
+  ctx.fillStyle = C.panel; ctx.fillRect(0, GROUND_Y, W, H - GROUND_Y);
+  ctx.fillStyle = C.line; ctx.fillRect(0, GROUND_Y, W, 3);
+  for (let i = 0; i < 6; i++){
+    const x = Math.round(CITY_X[i] - 19.5);
+    if (cities[i]) drawMap(CITY_MAP, CITY_COL, x, GROUND_Y - 27, 3);
+    else drawMap(RUBBLE_MAP, RUBBLE_COL, x, GROUND_Y - 12, 3);
+  }
+  drawMap(BAT_MAP, BAT_COL, BAT.x - 22, GROUND_Y - 21, 3);
+}
+function drawReadout(t){
+  if (!['play', 'boss', 'paused'].includes(S.mode)) return;
+  const y = GROUND_Y - 46, w = 110, h = 32;
+  ctx.fillStyle = '#080a13'; ctx.fillRect(BAT.x - w / 2, y - h / 2, w, h);
+  ctx.strokeStyle = jam > 0 ? C.bad : C.gold; ctx.lineWidth = 2; ctx.strokeRect(BAT.x - w / 2 + 1, y - h / 2 + 1, w - 2, h - 2);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  if (jam > 0){ ctx.font = `700 15px ${PIX}`; ctx.fillStyle = C.bad; ctx.fillText('JAMMED', BAT.x, y + 1); return; }
+  ctx.font = `700 22px ${MONO}`;
+  const cursor = Math.floor(t * 2.5) % 2 ? '_' : ' ';
+  const txt = buf.replace(TIMES, ` ${TIMES} `);
+  ctx.fillStyle = buf ? C.gold : C.muted;
+  ctx.fillText(buf ? txt + cursor : (S.mode === 'boss' ? '? × ?' : '?'), BAT.x, y + 1);
+  if (pend > 0){ ctx.fillStyle = C.gold; ctx.fillRect(BAT.x - w / 2 + 4, y + h / 2 - 5, (w - 8) * pend / .7, 2); }
+}
+function drawMissile(m, t){
+  ctx.strokeStyle = 'rgba(255,90,116,.7)'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(m.sx, m.sy); ctx.lineTo(m.x, m.y); ctx.stroke();
+  ctx.fillStyle = Math.floor(t * 8) % 2 ? C.white : C.pink;
+  ctx.fillRect(Math.round(m.x - 3), Math.round(m.y - 3), 6, 6);
+  const danger = m.p > .72 && !m.locked && Math.floor(t * 6) % 2;
+  const border = m.locked ? C.green : m.revealed ? C.gold : danger ? C.bad : C.pink;
+  pill(m.revealed ? `${fact(m.a, m.b)} = ${m.ans}` : fact(m.a, m.b), m.x, Math.min(m.y + 24, GROUND_Y - 44), border, 20);
+}
+function drawShots(){
+  for (const s of shots){
+    const u = Math.min(1, s.t / s.dur), x = s.x0 + (s.x1 - s.x0) * u, y = s.y0 + (s.y1 - s.y0) * u;
+    ctx.strokeStyle = 'rgba(63,184,255,.8)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(s.x0, s.y0); ctx.lineTo(x, y); ctx.stroke();
+    ctx.fillStyle = C.white; ctx.fillRect(Math.round(x - 2), Math.round(y - 2), 4, 4);
+  }
+}
+const BOOM_COLS = [C.gold, C.white, C.pink, C.blue];
+function drawBooms(t){
+  for (const b of booms){
+    const f = b.t < .2 ? b.t / .2 : 1 - (b.t - .2) / (b.dur - .2);
+    if (f <= 0) continue;
+    ctx.fillStyle = BOOM_COLS[Math.floor(t * 20 + b.x) % 4];
+    ctx.globalAlpha = .85;
+    ctx.beginPath(); ctx.arc(b.x, b.y, b.r * f, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+function drawBoss(t){
+  const frac = boss ? boss.t / BOSS_TIME : 1;
+  ctx.fillStyle = C.panel2; ctx.fillRect(20, 14, W - 40, 10);
+  ctx.fillStyle = frac < .25 ? C.bad : C.gold; ctx.fillRect(20, 14, (W - 40) * frac, 10);
+  ctx.font = `400 12px ${PIX}`; ctx.fillStyle = C.muted; ctx.textBaseline = 'middle';
+  ctx.textAlign = 'left'; ctx.fillText('SPLIT ' + (boss ? boss.count : 0), 20, 40);
+  ctx.textAlign = 'right'; ctx.fillText((boss ? boss.t.toFixed(1) : BOSS_TIME) + ' S', W - 20, 40);
+  if (!boss){
+    ctx.font = `700 26px ${PIX}`; ctx.fillStyle = C.pink; ctx.textAlign = 'center';
+    ctx.fillText('THE SPLITTER', W / 2, 200);
+    return;
+  }
+  const p = boss.prob;
+  // one box per pair; found ones fill in
+  const labels = p.pairs.map(q => boss.found.some(f => f[0] === q[0]) ? fact(...q) : `? ${TIMES} ?`);
+  ctx.font = `700 17px ${MONO}`;
+  const ws = labels.map(s => ctx.measureText(s).width + 14), total = ws.reduce((x, y) => x + y, 0) + 8 * (ws.length - 1);
+  let x = W / 2 - total / 2;
+  labels.forEach((s, i) => {
+    const done = s[0] !== '?';
+    pill(s, x + ws[i] / 2, 74, done ? C.green : C.line, 17, done ? '#123322' : C.panel, done ? C.text : C.muted);
+    x += ws[i] + 8;
+  });
+  // the warhead, with a wobble
+  const wx = W / 2 + Math.sin(t * 2) * 3, wy = boss.y;
+  drawMap(WARHEAD_MAP, WARHEAD_COL, Math.round(wx - 26), Math.round(wy - 30), 4);
+  pill(String(p.P), wx, wy + 4, C.gold, 26, C.ink, C.gold);
+}
+function draw(t){
+  ctx.setTransform(scale, 0, 0, scale, 0, 0);
+  drawSky(t);
+  if (bossish()) drawBoss(t);
+  else for (const m of missiles) if (m.alive) drawMissile(m, t);
+  drawShots();
+  drawBooms(t);
+  drawGround();
+  drawReadout(t);
+  for (const p of parts){ ctx.globalAlpha = Math.max(0, p.life / p.max); ctx.fillStyle = p.c; ctx.fillRect(p.x - 2, p.y - 2, 4, 4); }
+  ctx.globalAlpha = 1;
+  if (S.mode === 'play' && S.banner > 0){
+    ctx.globalAlpha = Math.min(1, S.banner * 2);
+    ctx.font = `700 40px ${PIX}`; ctx.fillStyle = C.gold; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('WAVE ' + S.wave, W / 2, 250);
+    ctx.font = `400 14px ${PIX}`; ctx.fillStyle = C.muted;
+    ctx.fillText(wv.total + ' MISSILES INCOMING', W / 2, 292);
+    ctx.globalAlpha = 1;
+  }
+}
+
+// ---------- loop ----------
+let last = null;
+function frame(ts){
+  const t = ts / 1000;
+  if (last === null) last = t;
+  const dt = Math.min(.05, t - last); last = t;
+  if (S.mode !== 'paused'){
+    for (const p of parts){ p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt; }
+    parts = parts.filter(p => p.life > 0);
+    for (const b of booms) b.t += dt;
+    booms = booms.filter(b => b.t < b.dur);
+  }
+  if (S.mode === 'play' || S.mode === 'boss'){
+    S.clock += dt;
+    jam = Math.max(0, jam - dt);
+    if (S.mode === 'play') updatePlay(dt); else updateBoss(dt);
+  }
+  draw(t);
+  requestAnimationFrame(frame);
+}
+
+function titleCard(){
+  const all = factList(), seen = all.filter(([a, b]) => boxOf(a, b) >= 0).length, fl = all.filter(([a, b]) => isFluent(a, b)).length;
+  showCard(`<h2>Defend the cities from the multiplication missiles</h2>
+    <p>Every missile carries a fact like <b>7 × 8</b>. Type the product and an interceptor flies up to meet it.</p>
+    <ul>
+      <li>Just type: it fires as soon as your number matches. <kbd>Enter</kbd> fires right away.</li>
+      <li>Answers under ${FAST} seconds score double and count toward <b>fluent</b>.</li>
+      <li>The game tracks every fact. The ones you miss or are slow on come back more often. Watch the fact map turn green.</li>
+      <li>Lose all six cities and night falls. A city gets rebuilt after every wave.</li>
+      <li>Every ${WAVES_PER_BOSS} waves, <b>The Splitter</b> drops a number for you to break into factor pairs.</li>
+    </ul>
+    ${seen ? `<p class="rule">Welcome back: ${fl} of ${all.length} facts fluent so far.</p>` : ''}
+    <button class="go" data-act="start">Defend</button>`);
+}
+
+function boot(){
+  fitCanvas();
+  if ('ResizeObserver' in window) new ResizeObserver(fitCanvas).observe(screen); else window.addEventListener('resize', fitCanvas);
+  titleCard();
+  renderHUD(); renderMap();
+  requestAnimationFrame(frame);
+}
+window.claude?.hot?.ready ? window.claude.hot.ready(boot) : boot();
+})();
+</script>
+</html>
