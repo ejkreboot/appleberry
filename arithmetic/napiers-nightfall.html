@@ -476,13 +476,9 @@ function stepShots(dt){
 }
 
 // ---------- waves ----------
-// pacing: a new missile arrives about once per "budget" seconds. The budget shrinks slowly with each
-// wave, but never below 1.3× her typical answer time, so the game pushes only a little past her speed.
-function typicalRt(){
-  const r = factList().filter(([a]) => a > 1).map(([a, b]) => facts[key(a, b)]).filter(f => f && f.ok && f.rt).map(f => f.rt).sort((x, y) => x - y);
-  return r.length < 5 ? 6 : r[Math.floor(r.length / 2)];
-}
-const budget   = w => Math.max(8 * Math.pow(.92, w - 1), 1.3 * typicalRt());
+// pacing: a new missile arrives about once per "budget" seconds. It shrinks hard each wave, on purpose:
+// within a few waves there's no time to skip count, only to remember. It bottoms out near fluent speed.
+const budget   = w => Math.max(2.5, 8 * Math.pow(.8, w - 1));
 const maxLive  = w => Math.min(3, 2 + Math.floor((w - 1) / 4));
 const fallTime = w => budget(w) * maxLive(w) * 1.15;
 const waveSize = w => Math.min(24, 10 + 2 * (w - 1));
