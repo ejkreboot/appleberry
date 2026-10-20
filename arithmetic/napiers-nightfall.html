@@ -96,6 +96,8 @@ kbd{display:inline-block;min-width:24px;text-align:center;padding:2px 6px;font:6
 .go{align-self:flex-start;background:var(--p);color:var(--ink);border:0;border-radius:3px;padding:10px 16px;font:700 14px var(--pixel);letter-spacing:.05em;cursor:pointer;
   box-shadow:inset 0 3px 0 rgba(255,255,255,.4),inset 0 -4px 0 rgba(0,0,0,.25)}
 .go:hover{filter:brightness(1.08)}
+.btns{display:flex;gap:10px;flex-wrap:wrap}
+.go.alt{background:var(--panel2);color:var(--text);box-shadow:inset 0 0 0 1px var(--line)}
 
 .pad{display:none;grid-template-columns:repeat(4,1fr);gap:6px}
 .pad button{background:var(--panel2);border:1px solid var(--line);border-bottom-width:4px;border-radius:5px;padding:11px 0;font:700 18px var(--mono);cursor:pointer;touch-action:manipulation;user-select:none;-webkit-user-select:none}
@@ -110,8 +112,9 @@ body.boss .pad button.op{color:var(--p)}
 .fmap i{aspect-ratio:1;border-radius:1px;background:var(--panel2);border:1px solid var(--line)}
 .fmap i.s0{background:var(--s);border-color:var(--s)}
 .fmap i.s1{background:var(--p);border-color:var(--p)}
-.fmap i.s3{background:rgba(111,224,138,.5);border-color:rgba(111,224,138,.5)}
-.fmap i.s4{background:var(--f);border-color:var(--f)}
+.fmap i.s3{background:var(--f);border-color:var(--f)}
+.fmap i.lk{opacity:.25}
+.fmap span.lk{opacity:.4}
 .fmap i.live{outline:2px solid var(--orb);outline-offset:-1px;animation:blink .5s steps(2) infinite}
 @keyframes blink{50%{outline-color:transparent}}
 .legend{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:10px;font-size:11.5px;color:var(--muted)}
@@ -275,6 +278,7 @@ function tip(a, b){
   const has = n => s === n || l === n, o = n => s === n ? l : s;
   if (s === 7 && l === 8) return `5, 6, 7, 8: <b>56 = 7 × 8</b>.`;
   if (s === 3 && l === 4) return `1, 2, 3, 4: <b>12 = 3 × 4</b>.`;
+  if (has(1))  return `Anything times 1 is itself: <b>${p}</b>.`;
   if (has(2))  return `Times 2 is doubling: ${o(2)} + ${o(2)} = <b>${p}</b>.`;
   if (has(10)) return `Times 10: put a zero after ${o(10)} to get <b>${p}</b>.`;
   if (s === l) return `${s} × ${s} = <b>${p}</b>. Squares come up all the time in algebra, so they're worth knowing cold.`;
@@ -317,13 +321,14 @@ function svgSprite(map, pal){
 }
 
 // ---------- state ----------
-const S = { mode:'title', wave:0, score:0, best:0, streak:0, muted:false, max:12, pausedFrom:'play', clock:0, banner:0, bossBest:0 };
+const S = { mode:'title', wave:0, bestWave:1, score:0, best:0, streak:0, muted:false, max:12, pausedFrom:'play', clock:0, banner:0, bossBest:0 };
 let facts = {};   // 'axb' -> { n, ok, miss, box (0–4), rt (smoothed seconds) }
 try {
   S.best = +localStorage.getItem('nn-best') || 0;
   S.bossBest = +localStorage.getItem('nn-boss-best') || 0;
   S.muted = localStorage.getItem('nn-muted') === '1';
   S.max = localStorage.getItem('nn-max') === '10' ? 10 : 12;
+  S.bestWave = +localStorage.getItem('nn-wave') || 1;
   facts = JSON.parse(localStorage.getItem('nn-facts') || '{}') || {};
 } catch {}
 function saveFacts(){ try { localStorage.setItem('nn-facts', JSON.stringify(facts)); } catch {} }
@@ -363,9 +368,13 @@ function tone(freq, dur = .08, type = 'square', vol = .045, slide = 0){
 const arpeggio = (notes, gap = 70) => notes.forEach((f, i) => setTimeout(() => tone(f, .12, 'square', .04), i * gap));
 
 // ---------- fact tracking ----------
-function factList(){
-  const r = [];
-  for (let a = 2; a <= S.max; a++) for (let b = a; b <= S.max; b++) r.push([a, b]);
+// the table opens up a row at a time: wave 1 is the 1s, 2s and 3s, and each wave adds the next row
+const rowsFor = w => Math.min(S.max, Math.max(1, w) + 2);
+const scopeRows = () => rowsFor(S.wave || S.bestWave);
+// every fact up to max, or only the unlocked ones (smaller factor within the open rows)
+function factList(scoped = false){
+  const r = [], rows = scoped ? scopeRows() : S.max;
+  for (let a = 1; a <= rows; a++) for (let b = a; b <= S.max; b++) r.push([a, b]);
   return r;
 }
 const boxOf = (a, b) => { const f = facts[key(a, b)]; return f && f.n ? f.box : -1; };
@@ -393,8 +402,8 @@ function nextFact(){
   const live = missiles.filter(m => m.alive);
   const busyK = new Set(live.map(m => key(m.a, m.b)).concat(recent));
   const busyP = new Set(live.map(m => m.ans));
-  let pool = factList().filter(([a, b]) => !busyK.has(key(a, b)) && !busyP.has(a * b));
-  if (!pool.length) pool = factList();
+  let pool = factList(true).filter(([a, b]) => !busyK.has(key(a, b)) && !busyP.has(a * b));
+  if (!pool.length) pool = factList(true);
   const [a, b] = wpick(pool, pool.map(([a, b]) => { const x = boxOf(a, b); return x < 0 ? UNSEEN : WEIGHT[x]; }));
   recent.push(key(a, b)); if (recent.length > 5) recent.shift();
   return Math.random() < .5 ? [a, b] : [b, a];
@@ -420,23 +429,25 @@ function renderHUD(){
   $('bBest').textContent = S.bossBest;
 }
 function renderMap(){
-  const n = S.max - 1, live = new Set(missiles.filter(m => m.alive).map(m => key(m.a, m.b)));
+  const live = new Set(missiles.filter(m => m.alive).map(m => key(m.a, m.b))), rows = scopeRows();
   const m = $('fmap');
-  m.style.gridTemplateColumns = `repeat(${n + 1}, 1fr)`;
-  let h = '<span></span>';
-  for (let b = 2; b <= S.max; b++) h += `<span>${b}</span>`;
-  for (let a = 2; a <= S.max; a++){
-    h += `<span>${a}</span>`;
-    for (let b = 2; b <= S.max; b++){
-      const x = boxOf(a, b), f = facts[key(a, b)];
-      const cls = (x < 0 ? '' : x === 0 ? 's0' : x <= 2 ? 's1' : x === 3 ? 's3' : 's4') + (live.has(key(a, b)) ? ' live' : '');
-      const t = x < 0 ? `${fact(a, b)}: not seen yet` : `${fact(a, b)}: ${f.ok} right, ${f.miss} missed${f.rt ? `, about ${f.rt.toFixed(1)} s` : ''}`;
+  m.style.gridTemplateColumns = `repeat(${S.max + 1}, 1fr)`;
+  let h = '';
+  for (let a = S.max; a >= 1; a--){
+    h += `<span class="${a > rows ? 'lk' : ''}">${a}</span>`;
+    for (let b = 1; b <= S.max; b++){
+      const x = boxOf(a, b), f = facts[key(a, b)], open = Math.min(a, b) <= rows;
+      const cls = (x < 0 ? '' : x === 0 ? 's0' : x <= 2 ? 's1' : 's3') + (open ? '' : ' lk') + (live.has(key(a, b)) ? ' live' : '');
+      const t = x < 0 ? `${fact(a, b)}: ${open ? 'not seen yet' : 'unlocks later'}` : `${fact(a, b)}: ${f.ok} right, ${f.miss} missed${f.rt ? `, about ${f.rt.toFixed(1)} s` : ''}`;
       h += `<i class="${cls}" title="${t}"></i>`;
     }
   }
+  h += '<span></span>';
+  for (let b = 1; b <= S.max; b++) h += `<span>${b}</span>`;
   m.innerHTML = h;
-  const all = factList(), fl = all.filter(([a, b]) => isFluent(a, b)).length;
-  $('fluentNote').innerHTML = `<b>${fl}</b> of ${all.length} facts fluent. Fluent means right in under ${FAST} seconds, several times running. 7 × 8 and 8 × 7 count as one fact.`;
+  const all = factList(), open = factList(true), fl = all.filter(([a, b]) => isFluent(a, b)).length;
+  const flOpen = open.filter(([a, b]) => isFluent(a, b)).length;
+  $('fluentNote').innerHTML = `<b>${flOpen}</b> of the ${open.length} unlocked facts are fluent (${fl} of ${all.length} overall). Fluent means right in under ${FAST} seconds, several times running. 7 × 8 and 8 × 7 count as one fact.`;
   const weak = all.filter(([a, b]) => { const x = boxOf(a, b); return x >= 0 && x < 3; })
     .map(([a, b]) => ({ a, b, f: facts[key(a, b)] }))
     .sort((p, q) => p.f.box - q.f.box || q.f.miss - p.f.miss || (q.f.rt || 99) - (p.f.rt || 99))
@@ -466,12 +477,12 @@ function stepShots(dt){
 
 // ---------- waves ----------
 // pacing: a new missile arrives about once per "budget" seconds. The budget shrinks slowly with each
-// wave, but never below 1.5× her typical answer time, so the game pushes only a little past her speed.
+// wave, but never below 1.3× her typical answer time, so the game pushes only a little past her speed.
 function typicalRt(){
-  const r = factList().map(([a, b]) => facts[key(a, b)]).filter(f => f && f.ok && f.rt).map(f => f.rt).sort((x, y) => x - y);
+  const r = factList().filter(([a]) => a > 1).map(([a, b]) => facts[key(a, b)]).filter(f => f && f.ok && f.rt).map(f => f.rt).sort((x, y) => x - y);
   return r.length < 5 ? 6 : r[Math.floor(r.length / 2)];
 }
-const budget   = w => Math.max(10 * Math.pow(.93, w - 1), 1.5 * typicalRt());
+const budget   = w => Math.max(8 * Math.pow(.92, w - 1), 1.3 * typicalRt());
 const maxLive  = w => Math.min(3, 2 + Math.floor((w - 1) / 4));
 const fallTime = w => budget(w) * maxLive(w) * 1.15;
 const waveSize = w => Math.min(24, 10 + 2 * (w - 1));
@@ -514,11 +525,14 @@ function nextWave(){
   wv = { total: waveSize(S.wave), spawned: 0, hits: 0, fast: 0, rts: [], lost: 0, wrong: 0, fluent: [] };
   missiles = []; shots = []; boss = null; buf = ''; pend = 0; jam = 0;
   S.banner = 1.8; spawnT = 0; S.mode = 'play'; hideCard();
-  say(`<b>Wave ${S.wave}.</b> ${wv.total} missiles, up to ${maxLive(S.wave)} at a time. Type a product to fire.`, 'gold');
+  if (S.wave > S.bestWave){ S.bestWave = S.wave; try { localStorage.setItem('nn-wave', S.bestWave); } catch {} }
+  const rows = rowsFor(S.wave);
+  wv.added = S.wave > 1 && rows > rowsFor(S.wave - 1) ? rows : 0;
+  say(`<b>Wave ${S.wave}.</b> ${wv.added ? `<b>New: the ${rows}s.</b> Facts from the 1s through the ${rows}s.` : `Facts from the 1s through the ${rows}s.`} ${wv.total} missiles, up to ${maxLive(S.wave)} at a time.`, 'gold');
   renderHUD(); renderMap();
 }
-function start(){
-  Object.assign(S, { wave: 0, score: 0, streak: 0, clock: 0 });
+function start(from = 1){
+  Object.assign(S, { wave: from - 1, score: 0, streak: 0, clock: 0 });
   cities = [true, true, true, true, true, true];
   boss = null; recent = []; lastAct = 0; parts = []; booms = [];
   nextWave();
@@ -553,6 +567,7 @@ function waveClear(){
     ${wv.fluent.length ? `<p>Newly fluent: <b>${wv.fluent.map(k => fact(...unkey(k))).join(', ')}</b></p>` : ''}
     ${dead.length ? '<p>The engineers rebuilt a city overnight.</p>' : ''}
     <p class="rule">City bonus +${bonus.toLocaleString()} · Score ${S.score.toLocaleString()}</p>
+    ${rowsFor(S.wave + 1) > rowsFor(S.wave) ? `<p>Next wave, the <b>${rowsFor(S.wave + 1)}s</b> join in.</p>` : ''}
     ${bossNext ? `<p>Something big is coming before wave ${S.wave + 1}: <b>The Splitter</b>. Your cities are safe from it.</p>` : ''}
     <button class="go" data-act="${bossNext ? 'boss' : 'next'}">${bossNext ? 'Face the Splitter' : 'Next wave'}</button>`);
 }
@@ -566,7 +581,7 @@ function gameOver(){
     <p>The last city fell during wave ${S.wave}.</p>
     <p class="rule">Score ${S.score.toLocaleString()} · Best ${S.best.toLocaleString()}</p>
     <p><b>${fl} of ${all.length}</b> facts are fluent.${weak.length ? ` Worth a look before next time: <b>${weak.join(', ')}</b>.` : ''}</p>
-    <button class="go" data-act="start">Play again</button>`), 900);
+    ${startButtons()}`), 900);
 }
 
 // ---------- answering ----------
@@ -647,10 +662,10 @@ function bossIntro(){
 }
 const warheadFall = () => Math.max(22, 34 - 2 * (S.wave / WAVES_PER_BOSS - 1));
 function bossProblem(){
-  const cand = [], w = [];
+  const cand = [], w = [], rows = scopeRows();
   for (let n = 12; n <= S.max * S.max; n++){
     const ps = pairsOf(n, S.max);
-    if (!ps.length || (boss && boss.used.has(n))) continue;
+    if (!ps.length || ps.some(q => q[0] > rows) || (boss && boss.used.has(n))) continue;
     cand.push({ P: n, pairs: ps }); w.push(ps.length >= 2 ? 3 : 1);
   }
   return wpick(cand, w);
@@ -758,8 +773,10 @@ function pause(){
 function toggleMute(){ S.muted = !S.muted; try { localStorage.setItem('nn-muted', S.muted ? '1' : '0'); } catch {} renderHUD(); }
 function toggleMax(){ S.max = S.max === 12 ? 10 : 12; try { localStorage.setItem('nn-max', S.max); } catch {} renderHUD(); renderMap(); }
 function resetProgress(){
-  if (!confirm('Erase the fact map and start tracking every fact from scratch?')) return;
-  facts = {}; saveFacts(); renderMap();
+  if (!confirm('Erase the fact map and go back to wave 1?')) return;
+  facts = {}; saveFacts();
+  S.bestWave = 1; try { localStorage.setItem('nn-wave', 1); } catch {}
+  renderMap();
 }
 function typeDigit(d){
   if (S.mode === 'boss') return bossKey(d);
@@ -776,7 +793,7 @@ function back(){ if (jam <= 0){ buf = buf.slice(0, -1); pend = 0; } }
 function primary(){
   if (performance.now() - cardAt < 450) return true;
   switch (S.mode){
-    case 'title': case 'over': start(); return true;
+    case 'title': case 'over': start(S.bestWave); return true;
     case 'waveclear': (S.wave % WAVES_PER_BOSS === 0 ? bossIntro : nextWave)(); return true;
     case 'bossintro': beginBoss(); return true;
     case 'bossclear': nextWave(); return true;
@@ -807,7 +824,7 @@ document.addEventListener('keydown', e => {
 card.addEventListener('click', e => {
   const b = e.target.closest('[data-act]'); if (!b) return;
   b.blur();
-  ({ start, next: nextWave, boss: bossIntro, beginboss: beginBoss, resume: pause })[b.dataset.act]();
+  ({ start: () => start(1), cont: () => start(S.bestWave), next: nextWave, boss: bossIntro, beginboss: beginBoss, resume: pause })[b.dataset.act]();
 });
 document.querySelectorAll('.pad button').forEach(b => {
   const k = b.dataset.k;
@@ -946,7 +963,7 @@ function draw(t){
     ctx.font = `700 40px ${PIX}`; ctx.fillStyle = C.gold; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText('WAVE ' + S.wave, W / 2, 250);
     ctx.font = `400 14px ${PIX}`; ctx.fillStyle = C.muted;
-    ctx.fillText(wv.total + ' MISSILES INCOMING', W / 2, 292);
+    ctx.fillText(wv.added ? `NEW: THE ${wv.added}S` : wv.total + ' MISSILES INCOMING', W / 2, 292);
     ctx.globalAlpha = 1;
   }
 }
@@ -972,11 +989,17 @@ function frame(ts){
   requestAnimationFrame(frame);
 }
 
+function startButtons(){
+  return S.bestWave > 1
+    ? `<div class="btns"><button class="go" data-act="cont">Continue at wave ${S.bestWave}</button><button class="go alt" data-act="start">Wave 1</button></div>`
+    : `<button class="go" data-act="start">Defend</button>`;
+}
 function titleCard(){
   const all = factList(), seen = all.filter(([a, b]) => boxOf(a, b) >= 0).length, fl = all.filter(([a, b]) => isFluent(a, b)).length;
   showCard(`<h2>Defend the cities from the multiplication missiles</h2>
     <p>Every missile carries a fact like <b>7 × 8</b>. Type the product and an interceptor flies up to meet it.</p>
     <ul>
+      <li>Wave 1 is the 1s, 2s and 3s. Each wave after that adds the next times table.</li>
       <li>Just type: it fires as soon as your number matches. <kbd>Enter</kbd> fires right away.</li>
       <li>Answers under ${FAST} seconds score double and count toward <b>fluent</b>.</li>
       <li>The game tracks every fact. The ones you miss or are slow on come back more often. Watch the fact map turn green.</li>
@@ -984,7 +1007,7 @@ function titleCard(){
       <li>Every ${WAVES_PER_BOSS} waves, <b>The Splitter</b> drops a number for you to break into factor pairs.</li>
     </ul>
     ${seen ? `<p class="rule">Welcome back: ${fl} of ${all.length} facts fluent so far.</p>` : ''}
-    <button class="go" data-act="start">Defend</button>`);
+    ${startButtons()}`);
 }
 
 function boot(){
