@@ -1,0 +1,1069 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cauchy's Cascade</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Silkscreen:wght@400;700&display=swap">
+<style>
+:root{
+  --ground:#0b0d18; --panel:#131728; --panel2:#1a1f35; --line:#2a3152; --text:#e4e9ff; --muted:#8a93b8;
+  --s:#ff5a74; --p:#ffc53d; --d:#3fb8ff; --f:#6fe08a; --bad:#ff3b3b; --orb:#f2f5ff; --ink:#0b0d18;
+  --pixel:"Silkscreen","Courier New",monospace;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{
+  margin:0;
+  background-color:var(--ground);
+  background-image:
+    linear-gradient(rgba(42,49,82,.28) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(42,49,82,.28) 1px,transparent 1px);
+  background-size:28px 28px;
+  color:var(--text); font-family:var(--mono); font-size:14px; line-height:1.45;
+  padding-inline:16px;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--p);outline-offset:2px}
+
+.app{max-width:1220px;margin:0 auto;padding-block:20px 32px;display:flex;flex-direction:column;gap:18px}
+
+/* ---------- header ---------- */
+.top{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.top > div:last-child{flex:1 1 300px;min-width:0}
+.logo{width:62px;height:62px;flex:none;background:var(--d);border-radius:3px;display:grid;place-items:center;
+  box-shadow:inset 0 4px 0 rgba(255,255,255,.4),inset 0 -5px 0 rgba(0,0,0,.28),inset 4px 0 0 rgba(255,255,255,.18),inset -4px 0 0 rgba(0,0,0,.18)}
+.logo .st{display:flex;flex-direction:column;gap:3px}
+.logo .st span{display:block;width:36px;padding:1px 0;text-align:center;font:700 12px/1.2 var(--mono);color:var(--ink);background:var(--p);box-shadow:inset 0 2px 0 rgba(255,255,255,.45),inset 0 -2px 0 rgba(0,0,0,.25)}
+.logo .st span:first-child{background:var(--orb)}
+h1{margin:0;font:700 clamp(22px,4.2vw,40px)/1 var(--pixel);letter-spacing:.02em;text-wrap:balance}
+h1 .a{color:var(--d)} h1 .b{color:var(--p)}
+.tag{margin:6px 0 0;color:var(--muted);font-size:13px}
+.tag b{color:var(--text);font-weight:600}
+
+/* ---------- stage ---------- */
+.stage{display:grid;grid-template-columns:minmax(170px,210px) minmax(0,560px) minmax(270px,320px);gap:22px;justify-content:center;align-items:start}
+.hud{display:flex;flex-direction:column;gap:14px}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:14px}
+.lbl{font:400 11px var(--pixel);letter-spacing:.08em;color:var(--muted);text-transform:uppercase}
+
+.stats{display:grid;grid-template-columns:1fr;gap:10px;margin:0}
+.stat{display:flex;justify-content:space-between;align-items:baseline;gap:8px;border-bottom:1px dashed var(--line);padding-bottom:8px}
+.stat:last-child{border-bottom:0;padding-bottom:0}
+.stat dd{margin:0;font:600 18px var(--mono);font-variant-numeric:tabular-nums}
+.stat dd.lvl{font:700 20px var(--pixel);color:var(--p)}
+
+.keys{display:grid;grid-template-columns:auto 1fr;gap:7px 10px;align-items:center;font-size:12.5px;margin:10px 0 0}
+kbd{display:inline-block;min-width:24px;text-align:center;padding:2px 6px;font:600 11px var(--mono);background:var(--panel2);border:1px solid var(--line);border-bottom-width:3px;border-radius:3px;color:var(--text)}
+.toggles{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.tbtn{background:var(--panel2);border:1px solid var(--line);border-radius:3px;padding:5px 9px;font:400 11px var(--pixel);cursor:pointer;letter-spacing:.05em}
+.tbtn[aria-pressed="true"]{background:var(--p);color:var(--ink);border-color:var(--p)}
+
+/* ---------- playfield ---------- */
+.play{display:flex;flex-direction:column;gap:10px;min-width:0}
+.toast{min-height:64px;display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:4px;background:var(--panel);border:1px solid var(--line);font-size:13px}
+.toast::before{content:"";flex:none;width:8px;height:8px;border-radius:1px;background:var(--muted);margin-top:5px}
+.toast .msg{flex:1;min-width:0;line-height:1.55;text-wrap:pretty}
+.toast .pts{font-weight:700;white-space:nowrap;color:var(--p)}
+.toast.good::before{background:var(--f)} .toast.bad{border-color:var(--bad)} .toast.bad::before{background:var(--bad)}
+.toast.gold{border-color:var(--p)} .toast.gold::before{background:var(--p)}
+.toast b{font-weight:600}
+
+.frame{padding:6px;background:#080a13;border:2px solid var(--line);border-radius:6px;box-shadow:0 0 0 4px var(--panel),0 18px 40px rgba(0,0,0,.45)}
+.screen{position:relative;width:100%;max-width:max(300px,calc((100dvh - 250px) * .75));aspect-ratio:3/4;margin:0 auto;overflow:hidden}
+.screen canvas{display:block;width:100%;height:100%;touch-action:none}
+.screen.shake{animation:shake .32s}
+@keyframes shake{20%{transform:translateX(-6px)}40%{transform:translateX(5px)}60%{transform:translateX(-4px)}80%{transform:translateX(2px)}}
+
+.card{position:absolute;inset:0;z-index:5;display:grid;place-items:center;padding:12px;background:rgba(8,10,19,.82);backdrop-filter:blur(2px)}
+.card .inner{max-width:420px;width:100%;background:var(--panel);border:2px solid var(--line);border-radius:6px;padding:18px 20px;display:flex;flex-direction:column;gap:10px;max-height:100%;overflow:auto}
+.card h2{margin:0;font:700 clamp(16px,3vw,23px)/1.15 var(--pixel);color:var(--p);text-wrap:balance}
+.card p{margin:0;font-size:13px;text-wrap:pretty}
+.card ul{margin:0;padding-left:18px;font-size:12.5px;display:flex;flex-direction:column;gap:4px}
+.card .rule{font:600 12.5px var(--mono);background:var(--panel2);border:1px solid var(--line);border-radius:3px;padding:8px 10px}
+.card pre.rule{margin:0;white-space:pre-wrap;line-height:1.6}
+.card pre.rule em{font-style:normal;color:var(--p)}
+.card svg{display:block;width:100%;height:auto;background:#0d1020;border:1px solid var(--line);border-radius:3px}
+.go{align-self:flex-start;background:var(--p);color:var(--ink);border:0;border-radius:3px;padding:10px 16px;font:700 14px var(--pixel);letter-spacing:.05em;cursor:pointer;
+  box-shadow:inset 0 3px 0 rgba(255,255,255,.4),inset 0 -4px 0 rgba(0,0,0,.25)}
+.go:hover{filter:brightness(1.08)}
+.btns{display:flex;gap:10px;flex-wrap:wrap}
+.go.alt{background:var(--panel2);color:var(--text);box-shadow:inset 0 0 0 1px var(--line)}
+.lvls{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.lvls button{background:var(--panel2);border:1px solid var(--line);border-radius:3px;padding:7px 6px;cursor:pointer;text-align:left;font:400 11.5px var(--mono);line-height:1.3}
+.lvls button b{display:block;font:700 11px var(--pixel);color:var(--p);letter-spacing:.04em}
+.lvls button:hover{border-color:var(--p)}
+
+.pad{display:none;grid-template-columns:repeat(5,1fr);gap:6px}
+.pad button{background:var(--panel2);border:1px solid var(--line);border-bottom-width:4px;border-radius:5px;padding:10px 0;font:700 17px var(--mono);cursor:pointer;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+.pad button.op{color:var(--p)}
+.pad button.topb{color:var(--d);font:700 12px var(--pixel)}
+.pad button.dropb{grid-column:1 / -1;background:var(--p);color:var(--ink);border-color:#b98a1a;font:700 16px var(--pixel)}
+@media (pointer:coarse),(max-width:1020px){.pad{display:grid}}
+
+/* ---------- right panel ---------- */
+.rules{margin:10px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;font-size:12.5px;line-height:1.45}
+.rules li{padding:6px 8px;border:1px solid transparent;border-radius:3px;color:var(--muted)}
+.rules li b{color:var(--text);font-weight:600}
+.rules li.on{border-color:var(--p);background:var(--panel2);color:var(--text)}
+.paper{margin-top:10px;display:flex;flex-direction:column;gap:10px;font-size:12.5px;font-variant-numeric:tabular-nums}
+.paper .step{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;padding-bottom:9px;border-bottom:1px dashed var(--line)}
+.paper .step:last-child{border-bottom:0;padding-bottom:0}
+.paper .lab{color:var(--muted);text-align:right;white-space:nowrap}
+.paper .eq{overflow-wrap:anywhere}
+.paper .res{border-top:1px solid var(--muted);padding-top:2px;color:var(--f);font-weight:600}
+.paper .empty{color:var(--muted)}
+
+@media (max-width:1020px){
+  .stage{grid-template-columns:minmax(0,560px)}
+  .play{order:-1}
+  .hud.left .stats{grid-template-columns:repeat(3,1fr)}
+  .hud.left .stat{flex-direction:column;align-items:flex-start;border-bottom:0;padding-bottom:0}
+  .keysbox{display:none}
+  .screen{max-width:max(260px,calc((100dvh - 380px) * .75))}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+</style>
+
+<div class="app">
+  <header class="top">
+    <div class="logo" aria-hidden="true"><div class="st"><span>60</span><span>60</span></div></div>
+    <div>
+      <h1><span class="a">Cauchy's</span> <span class="b">Cascade</span></h1>
+      <p class="tag">Each falling bar is an equation; each column is a letter. <b>Multiply the bar (or the stack) so a column matches</b>, and when it lands that letter pops. Get a row down to one letter and it's solved. Pops can tumble into the rows below.</p>
+    </div>
+  </header>
+
+  <main class="stage">
+    <aside class="hud left">
+      <div class="box">
+        <dl class="stats">
+          <div class="stat"><dt class="lbl">Level</dt><dd class="lvl" id="hLevel">1</dd></div>
+          <div class="stat"><dt class="lbl">Score</dt><dd id="hScore">0</dd></div>
+          <div class="stat"><dt class="lbl">Best</dt><dd id="hBest">0</dd></div>
+          <div class="stat"><dt class="lbl">Solved</dt><dd id="hSolved">0</dd></div>
+          <div class="stat"><dt class="lbl">Top combo</dt><dd id="hCombo">0</dd></div>
+        </dl>
+      </div>
+      <div class="box keysbox">
+        <div class="lbl">Controls</div>
+        <div class="keys">
+          <span><kbd>←</kbd><kbd>→</kbd></span><span>Move to another well</span>
+          <span><kbd>1</kbd>–<kbd>9</kbd></span><span>Multiply the bar</span>
+          <span><kbd>Space</kbd> <kbd>2</kbd></span><span>Multiply the stack top</span>
+          <span><kbd>↑</kbd></span><span>Flip the bar's signs</span>
+          <span><kbd>↓</kbd></span><span>Fall faster</span>
+          <span><kbd>Enter</kbd></span><span>Drop now</span>
+          <span><kbd>⌫</kbd></span><span>Clear multipliers</span>
+          <span><kbd>P</kbd> <kbd>M</kbd></span><span>Pause, sound</span>
+        </div>
+        <div class="toggles"><button class="tbtn" id="muteBtn" aria-pressed="false">Mute</button></div>
+      </div>
+    </aside>
+
+    <section class="play">
+      <div class="toast" id="toast" role="status" aria-live="polite"><span class="msg">Press Enter to start.</span></div>
+      <div class="frame">
+        <div class="screen" id="screen">
+          <canvas id="cv" aria-label="Game field"></canvas>
+          <div class="card" id="card" hidden></div>
+        </div>
+      </div>
+      <div class="pad" aria-label="Controls">
+        <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button><button data-k="left" class="op" aria-label="Move left">◀</button><button data-k="right" class="op" aria-label="Move right">▶</button>
+        <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button><button data-k="flip" class="op" aria-label="Flip signs">±</button><button data-k="top" class="topb" aria-label="Multiply the stack top">TOP×</button>
+        <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button><button data-k="back" class="op" aria-label="Clear multipliers">⌫</button><button data-k="soft" class="op" aria-label="Fall faster">▼</button>
+        <button data-k="drop" class="dropb">DROP</button>
+      </div>
+    </section>
+
+    <aside class="hud right">
+      <div class="box">
+        <div class="lbl">How to make a match</div>
+        <ol class="rules" id="rules">
+          <li data-r="match"><b>Same number:</b> just let it drop.</li>
+          <li data-r="flip"><b>Same number, opposite sign</b> (4 and −4): flip the bar with <kbd>↑</kbd>.</li>
+          <li data-r="bar"><b>One goes into the other</b> (5 and 15): multiply the smaller one. Bar: type <kbd>3</kbd>. Stack: <kbd>Space</kbd> <kbd>3</kbd>.</li>
+          <li data-r="lcm"><b>Neither goes in</b> (20 and 30): multiply both until they meet. 20 × 3 = 60 = 30 × 2.</li>
+          <li data-r="gem"><b>Rows missing the same letter</b> are worth gold: pop one against the other and only one letter is left.</li>
+        </ol>
+      </div>
+      <div class="box">
+        <div class="lbl">On paper</div>
+        <div class="paper" id="paper"><div class="empty">Every pop is written here the way you'd write it: one equation minus the other.</div></div>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<script>
+(() => {
+// ---------- constants ----------
+const W = 480, H = 640;
+const C = { ground:'#0b0d18', panel:'#131728', panel2:'#1a1f35', line:'#2a3152', text:'#e4e9ff', muted:'#8a93b8',
+            pink:'#ff5a74', gold:'#ffc53d', blue:'#3fb8ff', green:'#6fe08a', bad:'#ff3b3b', white:'#f2f5ff', ink:'#0b0d18' };
+const PIX = '"Silkscreen","Courier New",monospace', MONO = '"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace';
+const MINUS = '−';
+const VAR_COL = [C.pink, C.gold, C.blue], CONST_COL = '#d9def5';
+const ROWS = 11, ROW_H = 46, WELL_BOT = 590, WELL_TOP = WELL_BOT - ROWS * ROW_H;   // 84
+const BOSS_EVERY = 3;
+
+const LEVELS = [
+  { name:'Straight Drop', wells:1, nv:2, types:['match','match','flip'], fall:16, goal:6, start:4, rules:['match','flip'],
+    intro:'A bar of numbers is falling. Each column is a letter. When the bar lands, any column where its number <b>matches</b> the number below pops, and that letter is knocked out. A row with only one letter left is <b>solved</b> and clears.',
+    ex:'stack    4   7\nbar      4   2  <em>same 4: drop</em>\nleft     ·   5  <em>only y: solved!</em>\n\nstack    3   6\nbar     −3   1  <em>↑ flips it: 3 −1</em>' },
+  { name:'Times Something', wells:1, nv:2, types:['match','bar','bar','top','top'], fall:16, goal:6, start:4, rules:['bar'],
+    intro:'Now the numbers don\'t match yet, but one goes into the other. Multiply the smaller one. Typing a digit multiplies the <b>whole bar</b>. <kbd>Space</kbd> and then a digit multiplies the <b>whole top row of the stack</b>. Every number in the row changes, not just one.',
+    ex:'stack   12   5\nbar      4   3  <em>type 3</em>\nbar ×3  12   9  <em>the 12s match</em>\n\nstack    3   8\nbar      6   1  <em>Space 2</em>\nstack×2  6  16  <em>the 6s match</em>' },
+  { name:'Meet in the Middle', wells:1, nv:2, types:['bar','top','lcm','lcm','lcm'], fall:18, goal:6, start:4, rules:['lcm'],
+    intro:'Neither number goes into the other, like 20 and 30. Multiply <b>both</b> so they meet at a common multiple: the bar ×3 and the stack ×2 both make 60. Look for the smallest number they share.',
+    ex:'stack   30   7\nbar     20   3  <em>3, then Space 2</em>\nbar ×3  60   9\nstack×2 60  14  <em>the 60s match</em>' },
+  { name:'Two Wells', wells:2, nv:2, types:['match','flip','bar','top','lcm','lcm'], fall:15, goal:8, start:3, rules:['match','bar','lcm'],
+    intro:'Two wells. Steer the bar with <kbd>←</kbd> <kbd>→</kbd> and pick the well where it matches with the <b>smallest multipliers</b>. A bar that doesn\'t match just stacks up, and a full well ends the game.',
+    ex:'left top:   9   4\nright top:  6   2\nbar:        3   2\n\n<em>right well: the 2s already match</em>' },
+  { name:'Three Letters', wells:2, nv:3, types:['match','flip','bar','top','lcm'], fall:18, goal:8, start:3, rules:['gem'],
+    intro:'Three letters. A pop now leaves a row with two letters. Here\'s the trick from solving three equations: two rows that are <b>missing the same letter</b> can be popped against each other, leaving just one letter. And a fresh row that matches the row under it <b>cascades</b> into it on its own.',
+    ex:'stack  ·   5   2  <em>no a</em>\nbar    ·   5   7  <em>no a, and 5 = 5</em>\nleft   ·   ·  −5  <em>only c: solved!</em>' },
+  { name:'Avalanche', wells:3, nv:3, types:['match','flip','bar','top','lcm','lcm'], fall:16, goal:10, start:3, rise:26, rules:['match','flip','bar','lcm','gem'],
+    intro:'Three wells, and every so often a new row pushes up from the bottom. Pick your well, find your multipliers, and keep the stacks low.',
+    ex:'Look for the column that matches with the\nsmallest multipliers in any of the wells.' },
+];
+
+// ---------- helpers ----------
+const rand = (a, b) => a + Math.random() * (b - a);
+const ri = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+function nz(a, b){ let v; do v = ri(a, b); while (!v); return v; }
+function gcd(a, b){ a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; }
+function shuffle(a){ for (let i = a.length - 1; i > 0; i--){ const j = ri(0, i); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function wpick(items, w){ let t = w.reduce((x, y) => x + y, 0), r = Math.random() * t; for (let i = 0; i < items.length; i++){ r -= w[i]; if (r <= 0) return items[i]; } return items[items.length - 1]; }
+function fmt(n){ n = Math.round(n * 1e6) / 1e6; if (!n) n = 0; return (n < 0 ? MINUS : '') + String(Math.abs(n)); }
+const NZ9 = [-9,-8,-7,-6,-5,-4,-3,-2,-1,1,2,3,4,5,6,7,8,9];
+// smallest multipliers making p (bar) and q (stack) equal: bar × m1, stack × m2, flip if the signs differ
+function mins(p, q){
+  if (!p || !q) return null;
+  const g = gcd(p, q), m1 = Math.abs(q) / g, m2 = Math.abs(p) / g;
+  return { m1, m2, L: m1 * Math.abs(p), flip: Math.sign(p) !== Math.sign(q), cost: m1 + m2 + (Math.sign(p) !== Math.sign(q) ? .5 : 0) };
+}
+
+// ---------- state ----------
+const S = { mode:'title', L:1, bestL:1, score:0, best:0, solved:0, maxCombo:0, muted:false, pausedFrom:'play',
+            mBar:1, sign:1, mTop:1, armTop:false, soft:false, riseT:0, cardAt:0, practice:false };
+try {
+  S.best = +localStorage.getItem('cc-best') || 0;
+  S.bestL = +localStorage.getItem('cc-level') || 1;
+  S.muted = localStorage.getItem('cc-muted') === '1';
+} catch {}
+let V = { nv:2, vars:['x', 'y'], hasConst:false, nw:1 }, G = null;
+let wells = [], bar = null, res = null, boss = null, parts = [], booms = [], paper = [];
+const lvIdx = L => (L - 1) % LEVELS.length, cycle = L => Math.floor((L - 1) / LEVELS.length);
+const LV = () => LEVELS[lvIdx(S.L)];
+const levelName = L => LEVELS[lvIdx(L)].name + (cycle(L) ? ' ' + '+'.repeat(Math.min(3, cycle(L))) : '');
+function saveBest(){ if (S.score > S.best){ S.best = S.score; try { localStorage.setItem('cc-best', S.best); } catch {} } }
+
+// ---------- DOM ----------
+const $ = id => document.getElementById(id);
+const cv = $('cv'), ctx = cv.getContext('2d'), screen = $('screen'), card = $('card'), toast = $('toast');
+let scale = 1;
+function fitCanvas(){
+  const r = screen.getBoundingClientRect();
+  if (!r.width) return;
+  const dpr = Math.min(3, window.devicePixelRatio || 1);
+  cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr);
+  scale = cv.width / W;
+  ctx.setTransform(scale, 0, 0, scale, 0, 0);
+}
+
+// ---------- sound ----------
+let actx = null;
+function tone(freq, dur = .08, type = 'square', vol = .045, slide = 0){
+  if (S.muted) return;
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    const t0 = actx.currentTime, o = actx.createOscillator(), g = actx.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, t0);
+    if (slide) o.frequency.exponentialRampToValueAtTime(freq * slide, t0 + dur);
+    g.gain.setValueAtTime(vol, t0); g.gain.exponentialRampToValueAtTime(.0001, t0 + dur);
+    o.connect(g).connect(actx.destination); o.start(t0); o.stop(t0 + dur + .02);
+  } catch {}
+}
+const arpeggio = (notes, gap = 70) => notes.forEach((f, i) => setTimeout(() => tone(f, .12, 'square', .04), i * gap));
+const tick = () => tone(880, .03, 'square', .02);
+
+// ---------- text ----------
+function termsStr(v, k){
+  let s = '';
+  v.forEach((c, i) => {
+    if (!c) return;
+    const mag = (Math.abs(c) === 1 ? '' : fmt(Math.abs(c))) + V.vars[i];
+    s += s ? (c < 0 ? ` ${MINUS} ` : ' + ') + mag : (c < 0 ? MINUS : '') + mag;
+  });
+  s = s || '0';
+  return V.hasConst ? s + ' = ' + fmt(k) : s;
+}
+const term = (c, i) => (c < 0 ? MINUS : '') + (Math.abs(c) === 1 ? '' : fmt(Math.abs(c))) + V.vars[i];
+// which keys turn bar value p and stack value q into a match
+function keysFor(m){
+  const k = [];
+  if (m.flip) k.push('<kbd>↑</kbd>');
+  if (m.m1 > 1) k.push(`<kbd>${m.m1}</kbd>`);
+  if (m.m2 > 1) k.push(`<kbd>Space</kbd> <kbd>${m.m2}</kbd>`);
+  return k.length ? k.join(' then ') : 'just drop it';
+}
+function howTo(p, q, i){
+  const m = mins(p, q), A = Math.abs(p), B = Math.abs(q), v = V.vars[i];
+  if (A === B) return m.flip ? `${term(p, i)} and ${term(q, i)} are opposites: flip with <kbd>↑</kbd>.` : `${term(p, i)} already matches ${term(q, i)}: just drop it.`;
+  const meet = m.m1 > 1 && m.m2 > 1 ? `${A} and ${B} meet at <b>${m.L}</b> (${A} × ${m.m1} and ${B} × ${m.m2})` : m.m1 > 1 ? `${A} × ${m.m1} = ${B}` : `${B} × ${m.m2} = ${A}`;
+  return `${v}: ${meet}. Keys: ${keysFor(m)}.`;
+}
+
+// ---------- rows and bars ----------
+const mkRow = (v, k = 0) => ({ v, k, flash:null, gem:0, born:0 });
+function randRow(){
+  const big = cycle(S.L) > 0 && Math.random() < .3;
+  return mkRow(Array.from({ length: V.nv }, () => { const x = Math.random() < .75 ? ri(1, 9) : -ri(1, 9); return big && Math.random() < .5 ? x * pick([2, 5, 10]) : x; }));
+}
+// how a bar's number b relates to the stack's number t, for each kind of lesson
+function planCol(type, t){
+  const A = Math.abs(t);
+  switch (type){
+    case 'match': return { b: t, s: 1, top: 1 };
+    case 'flip':  return { b: -t, s: -1, top: 1 };
+    case 'bar': {   // bar is smaller: multiply the bar
+      const ks = [2, 3, 4, 5].filter(k => A % k === 0 && A / k >= 1);
+      if (!ks.length) return null;
+      const k = pick(ks); return { b: t / k, s: k, top: 1 };
+    }
+    case 'top': {   // stack is smaller: multiply the stack
+      const k = pick([2, 3, 4]); if (A * k > 60) return null;
+      return { b: t * k, s: 1, top: k };
+    }
+    case 'lcm': {   // neither divides: t = g·u, b = g·f with u, f coprime → bar × u, stack × f
+      const opts = [];
+      for (let g = 1; g <= A; g++){
+        if (A % g) continue;
+        const u = A / g; if (u < 2 || u > 6) continue;
+        for (let f = 2; f <= 6; f++) if (gcd(u, f) === 1 && g * f <= 60) opts.push({ u, f, g });
+      }
+      if (!opts.length) return null;
+      const o = pick(opts); return { b: Math.sign(t) * o.g * o.f, s: o.u, top: o.f };
+    }
+  }
+}
+// a bar with at least one good move: aimed at one well's top row, with leftovers kept small
+function makeBar(){
+  const lv = LV(), live = wells.map((st, w) => ({ w, h: st.length })).filter(c => c.h > 0);
+  for (let tries = 0; tries < 300 && live.length; tries++){
+    const tw = wpick(live, live.map(c => 1 + c.h)).w, st = wells[tw];
+    const T = st[st.length - 1].v, T2 = st.length > 1 ? st[st.length - 2].v : null;
+    const cols = T.map((v, i) => v ? i : -1).filter(i => i >= 0), i = pick(cols);
+    const plan = planCol(pick(lv.types), T[i]);
+    if (!plan) continue;
+    if (S.L > 3 && Math.random() < .25 && plan.s !== -1){ plan.b = -plan.b; plan.s = -plan.s; }   // needs a flip too
+    const B = new Array(V.nv).fill(0); B[i] = plan.b;
+    let ok = true;
+    for (let j = 0; j < V.nv && ok; j++){
+      if (j === i) continue;
+      if (!T[j] && V.nv === 3 && Math.random() < .7){ B[j] = 0; continue; }   // missing the same letter: a solve is coming
+      const want = T2 && T2[j] && T[j] && Math.random() < .5 ? [pick([T2[j], -T2[j]])] : [];
+      ok = false;
+      for (const r of want.concat(shuffle(NZ9.slice()))){
+        const num = plan.top * T[j] - r;
+        if (num % plan.s) continue;
+        const bj = num / plan.s;
+        if (!bj || Math.abs(bj) > 40) continue;
+        B[j] = bj; ok = true; break;
+      }
+    }
+    if (!ok || B.filter(Boolean).length < 2) continue;
+    return mkRow(B);
+  }
+  return randRow();
+}
+
+// ---------- layout ----------
+function layout(){
+  const nc = V.nv + (V.hasConst ? 1 : 0), gap = 14;
+  const colW = Math.min(V.nw === 1 ? 84 : 72, Math.floor((448 - gap * (V.nw - 1)) / (V.nw * nc)));
+  const wellW = colW * nc, total = V.nw * wellW + gap * (V.nw - 1), x0 = Math.round((W - total) / 2);
+  G = { nc, colW, wellW, xs: Array.from({ length: V.nw }, (_, i) => x0 + i * (wellW + gap)) };
+}
+const stackTopY = w => WELL_BOT - wells[w].length * ROW_H;
+const rowY = r => WELL_BOT - (r + 1) * ROW_H;
+const cellCX = (w, c) => G.xs[w] + (c + .5) * G.colW;
+
+// ---------- HUD ----------
+function say(html, kind = ''){ toast.className = 'toast' + (kind ? ' ' + kind : ''); toast.innerHTML = `<span class="msg">${html}</span>`; }
+function showCard(html){ card.innerHTML = `<div class="inner">${html}</div>`; card.hidden = false; S.cardAt = performance.now(); const b = card.querySelector('.go'); if (b) b.focus({ preventScroll:true }); }
+function hideCard(){ card.hidden = true; card.innerHTML = ''; }
+function renderHUD(){
+  $('hLevel').textContent = boss ? 'P' : S.L;
+  $('hScore').textContent = S.score.toLocaleString();
+  $('hBest').textContent = S.best.toLocaleString();
+  $('hSolved').textContent = boss ? '–' : `${S.solved} / ${LV().goal}`;
+  $('hCombo').textContent = S.maxCombo;
+  $('muteBtn').setAttribute('aria-pressed', S.muted);
+  const on = S.mode === 'title' ? [] : boss ? ['match', 'bar', 'lcm', 'gem'] : LV().rules;
+  document.querySelectorAll('#rules li').forEach(li => li.classList.toggle('on', on.includes(li.dataset.r)));
+}
+function renderPaper(){
+  const el = $('paper');
+  if (!paper.length){ el.innerHTML = '<div class="empty">Every pop is written here the way you\'d write it: one equation minus the other.</div>'; return; }
+  el.innerHTML = paper.map(s => `<div class="step">
+    <span class="lab">${s.la}</span><span class="eq">${s.a}</span>
+    <span class="lab">${s.op} ${s.lb}</span><span class="eq">${s.b}</span>
+    <span class="lab res">=</span><span class="eq res">${s.r}${s.note ? ` <span style="color:var(--p)">${s.note}</span>` : ''}</span></div>`).join('');
+}
+function shake(){ screen.classList.remove('shake'); void screen.offsetWidth; screen.classList.add('shake'); setTimeout(() => screen.classList.remove('shake'), 340); }
+function burst(x, y, color, n = 14, sp = 150){
+  for (let i = 0; i < n; i++){
+    const a = rand(0, Math.PI * 2), v = rand(sp * .3, sp);
+    parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: rand(.35, .7), max: .7, c: color });
+  }
+}
+const boom = (x, y, r = 22, dur = .45) => booms.push({ x, y, r, dur, t: 0 });
+
+// ---------- play ----------
+function resetMults(){ S.mBar = 1; S.sign = 1; S.mTop = 1; S.armTop = false; }
+function spawnBar(){
+  if (boss) return bossSpawn();
+  wells.forEach(st => { if (!st.length){ const r = randRow(); r.born = .4; st.push(r); } });
+  bar = { row: makeBar(), w: Math.floor(V.nw / 2), y: WELL_TOP - 4 };
+  resetMults();
+  if (bar.y + ROW_H > stackTopY(bar.w)) return gameOver();
+}
+const fallTime = () => boss ? 34 : Math.max(7, LV().fall * Math.pow(.85, cycle(S.L)));
+const allowedWell = w => !boss || boss.allowed.includes(w);
+function moveBar(d){
+  if (!canAct()) return;
+  let w = bar.w;
+  for (let n = 0; n < V.nw; n++){
+    w += d; if (w < 0 || w >= V.nw) return;
+    if (!allowedWell(w)) continue;
+    if (stackTopY(w) < bar.y + ROW_H) return say('That well is stacked too high to slide past.');
+    bar.w = w; tick(); return;
+  }
+}
+const canAct = () => S.mode === 'play' && bar && !res;
+function typeDigit(d){
+  if (!canAct()) return;
+  const n = +d; if (!n) return;
+  if (S.armTop){ S.mTop = n; S.armTop = false; } else S.mBar = n;
+  tick();
+}
+function armTop(){ if (canAct()){ S.armTop = !S.armTop; tick(); } }
+function flip(){ if (canAct()){ S.sign = -S.sign; tone(660, .05, 'square', .03); } }
+function clearMults(){ if (canAct()){ resetMults(); tick(); } }
+function hardDrop(){ if (canAct()){ bar.y = stackTopY(bar.w) - ROW_H; land(); } }
+
+const scaledBar = () => ({ v: bar.row.v.map(x => x * S.sign * S.mBar), k: bar.row.k * S.sign * S.mBar });
+const scaledTop = w => { const T = wells[w][wells[w].length - 1]; return T ? { v: T.v.map(x => x * S.mTop), k: T.k * S.mTop } : null; };
+function matchCols(a, b){ return a.v.map((x, i) => x && x === b.v[i] ? i : -1).filter(i => i >= 0); }
+// cheapest way this bar could have popped something, over the wells it may enter
+function bestFor(B){
+  let best = null;
+  wells.forEach((st, w) => {
+    if (!allowedWell(w) || !st.length) return;
+    const T = st[st.length - 1].v;
+    B.v.forEach((p, i) => { const m = mins(p, T[i]); if (m && (!best || m.cost < best.m.cost)) best = { w, i, m, p, q: T[i] }; });
+  });
+  return best;
+}
+const wellName = w => V.nw === 2 ? ['left', 'right'][w] : ['left', 'middle', 'right'][w];
+
+function land(){
+  const w = bar.w, st = wells[w], B = bar.row, sB = scaledBar(), sT = scaledTop(w);
+  const cols = sT ? matchCols(sB, sT) : [];
+  if (boss) return bossLand(w, B, sB, sT, cols);
+  if (!cols.length){
+    const best = bestFor(B);
+    st.push(mkRow(B.v.slice(), B.k));
+    tone(130, .18, 'square', .05, .7);
+    let msg = '<b>No match</b>, so the bar stacked up.';
+    if (best) msg += ` ${best.w !== w ? `It fit the <b>${wellName(best.w)}</b> well. ` : ''}${howTo(best.p, best.q, best.i)}`;
+    say(msg, 'bad');
+    bar = null;
+    if (st.length >= ROWS) return gameOver();
+    spawnBar(); return;
+  }
+  res = { gen: popSeq(w, B, sB, sT, cols), wait: 0 };
+  bar = null;
+}
+function* popSeq(w, B, sB, sT, cols){
+  const st = wells[w], T = st[st.length - 1], L = S.L;
+  // show both rows scaled, matches glowing
+  const shownT = mkRow(sT.v, sT.k); shownT.flash = cols;
+  const shownB = mkRow(sB.v, sB.k); shownB.flash = cols;
+  st[st.length - 1] = shownT; st.push(shownB);
+  tone(520, .1, 'square', .035, 1.6);
+  yield .32;
+  // pop: the new row is (stack) − (bar)
+  const R = mkRow(sT.v.map((x, i) => x - sB.v[i]), sT.k - sB.k); R.born = .3;
+  for (const c of cols) for (const r of [st.length - 1, st.length - 2]){ boom(cellCX(w, c), rowY(r) + ROW_H / 2); burst(cellCX(w, c), rowY(r) + ROW_H / 2, VAR_COL[c]); }
+  st.pop(); st.pop(); st.push(R);
+  tone(150, .22, 'sawtooth', .04, .4);
+  const c0 = cols[0], p = B.v[c0], q = T.v[c0], m = mins(p, q);
+  const clean = cols.some(i => { const mm = mins(B.v[i], T.v[i]); return S.mBar === mm.m1 && S.mTop === mm.m2; });
+  let pts = 10 * L * cols.length + (clean ? 15 * L : 0);
+  S.score += pts;
+  paper = [{ la: S.mTop > 1 ? `stack ×${S.mTop}` : 'stack', a: termsStr(sT.v, sT.k), op: MINUS, lb: S.mBar * S.sign !== 1 ? `bar ×${S.sign < 0 ? MINUS : ''}${S.mBar}` : 'bar', b: termsStr(sB.v, sB.k), r: termsStr(R.v, R.k) }];
+  const vs = cols.map(i => V.vars[i]).join(' and ');
+  let msg;
+  if (!clean) msg = `<b>${vs} popped</b>, but ${Math.abs(p)} and ${Math.abs(q)} already meet at <b>${m.L}</b>: ${keysFor(m)} does it with smaller numbers.`;
+  else if (m.m1 === 1 && m.m2 === 1) msg = m.flip ? `<b>${vs} popped.</b> Flipped, ${fmt(p)} became ${fmt(-p)}: a match.` : `<b>${vs} popped.</b> Same number, straight drop.`;
+  else msg = `<b>${vs} popped.</b> ${Math.abs(p)}${S.mBar > 1 ? ' × ' + S.mBar : ''} = ${m.L} = ${Math.abs(q)}${S.mTop > 1 ? ' × ' + S.mTop : ''}.`;
+  say(`${msg} <span class="pts">+${pts}</span>`, clean ? 'good' : '');
+  renderPaper(); renderHUD();
+  yield .4;
+  // settle: solve single letters, cascade into the row below
+  let combo = 0;
+  for (;;){
+    const top = st[st.length - 1]; if (!top) break;
+    const n = top.v.filter(Boolean).length;
+    if (n === 0){
+      st.pop(); const b = 60 * L; S.score += b; S.solved++;
+      for (let c = 0; c < V.nv; c++) burst(cellCX(w, c), rowY(st.length) + ROW_H / 2, C.white, 10, 160);
+      say(`<b>Perfect clear!</b> The whole row vanished. <span class="pts">+${b}</span>`, 'gold'); arpeggio([523, 784, 1047, 1319], 60);
+      yield .35; break;
+    }
+    if (n === 1){
+      top.gem = 1; tone(988, .1, 'square', .04); yield .5;
+      const c = top.v.findIndex(Boolean), b = 25 * L * (combo + 1);
+      st.pop(); S.solved++; S.score += b;
+      burst(cellCX(w, c), rowY(st.length) + ROW_H / 2, VAR_COL[c], 30, 220); boom(cellCX(w, c), rowY(st.length) + ROW_H / 2, 34, .6);
+      arpeggio([659, 784, 988, 1319], 55);
+      say(`${toast.querySelector('.msg').innerHTML} <b>${V.vars[c]} solved!</b> <span class="pts">+${b}</span>`, 'gold');
+      paper[paper.length - 1].note = `→ ${V.vars[c]} solved`; renderPaper();
+      yield .3; break;
+    }
+    const below = st[st.length - 2]; if (!below) break;
+    const cm = cascadeMatch(top, below); if (!cm) break;
+    combo++; S.maxCombo = Math.max(S.maxCombo, combo);
+    top.flash = cm.cols; below.flash = cm.cols;
+    tone(440 + combo * 110, .1, 'square', .04, 1.5);
+    yield .4;
+    const N = mkRow(below.v.map((x, i) => x + cm.s * top.v[i]), below.k + cm.s * top.k); N.born = .3;
+    for (const c of cm.cols) for (const r of [st.length - 1, st.length - 2]) burst(cellCX(w, c), rowY(r) + ROW_H / 2, VAR_COL[c]);
+    paper.push({ la: 'row below', a: termsStr(below.v, below.k), op: cm.s < 0 ? MINUS : '+', lb: 'new row', b: termsStr(top.v, top.k), r: termsStr(N.v, N.k) });
+    st.pop(); st.pop(); st.push(N);
+    const b = 30 * L * combo; S.score += b;
+    say(`<b>Cascade ×${combo}!</b> The new row's ${cm.cols.map(c => term(top.v[c], c)).join(', ')} ${cm.s < 0 ? 'matched' : 'cancelled with'} the row below. <span class="pts">+${b}</span>`, 'gold');
+    renderPaper(); renderHUD();
+    yield .4;
+  }
+  saveBest(); renderHUD();
+}
+function cascadeMatch(top, below){
+  for (let i = 0; i < V.nv; i++){
+    const a = top.v[i], b = below.v[i];
+    if (!a || !b || Math.abs(a) !== Math.abs(b)) continue;
+    const s = a === b ? -1 : 1;
+    return { s, cols: top.v.map((x, j) => x && below.v[j] + s * x === 0 ? j : -1).filter(j => j >= 0) };
+  }
+  return null;
+}
+function afterResolve(){
+  if (S.mode !== 'play') return;
+  if (boss) return bossAfter();
+  if (S.solved >= LV().goal) return levelClear();
+  spawnBar();
+}
+function rise(){
+  const w = ri(0, V.nw - 1), st = wells[w];
+  const r = randRow(); r.born = .4; st.unshift(r);
+  tone(90, .25, 'square', .05, .8);
+  if (st.length >= ROWS) return gameOver();
+  if (bar && bar.w === w && bar.y + ROW_H > stackTopY(w)) bar.y = stackTopY(w) - ROW_H;
+}
+
+// ---------- levels ----------
+function start(L){
+  Object.assign(S, { L, score:0, maxCombo:0, practice:false });
+  boss = null; levelIntro();
+}
+function levelIntro(){
+  const lv = LV();
+  S.mode = 'levelintro'; bar = null; res = null; boss = null; S.solved = 0;
+  if (S.L > S.bestL){ S.bestL = S.L; try { localStorage.setItem('cc-level', S.bestL); } catch {} }
+  V = { nv: lv.nv, vars: lv.nv === 2 ? ['x', 'y'] : ['a', 'b', 'c'], hasConst:false, nw: lv.wells };
+  layout();
+  wells = Array.from({ length: V.nw }, () => Array.from({ length: lv.start }, randRow));
+  paper = []; renderPaper(); renderHUD();
+  showCard(`<h2>Level ${S.L} · ${levelName(S.L)}</h2>
+    <p>${lv.intro}</p>
+    <pre class="rule">${lv.ex}</pre>
+    <p>Solve <b>${lv.goal}</b> letters to clear the level.${cycle(S.L) ? ` Round ${cycle(S.L) + 1}: faster, with bigger numbers.` : ''}</p>
+    <button class="go" data-act="go">Go</button>`);
+  say(`<b>Level ${S.L}: ${levelName(S.L)}.</b>`, 'gold');
+}
+function beginLevel(){ hideCard(); S.mode = 'play'; S.riseT = LV().rise || 0; spawnBar(); arpeggio([262, 330, 392, 523]); }
+function levelClear(){
+  const rows = wells.reduce((n, st) => n + st.length, 0), bonus = Math.max(0, ROWS * V.nw - rows) * 10 * S.L;
+  S.score += bonus; saveBest();
+  S.mode = 'levelclear'; bar = null; renderHUD();
+  arpeggio([392, 523, 659, 784, 1047], 80);
+  const bossNext = S.L % BOSS_EVERY === 0;
+  showCard(`<h2>Level ${S.L} clear</h2>
+    <p class="rule">Low-stack bonus +${bonus.toLocaleString()} · Score ${S.score.toLocaleString()}</p>
+    ${bossNext ? '<p>Before the next level: <b>Parabola Drop</b>. Three points, one parabola, and this time the = column comes along.</p>' : `<p>Next: <b>${levelName(S.L + 1)}</b>.</p>`}
+    <button class="go" data-act="${bossNext ? 'boss' : 'next'}">${bossNext ? 'Parabola Drop' : 'Next level'}</button>`);
+}
+function gameOver(){
+  S.mode = 'over'; bar = null; res = null; saveBest(); renderHUD(); shake();
+  tone(80, .6, 'sawtooth', .07, .4);
+  showCard(`<h2>Stacked out</h2>
+    <p>A well filled to the top on level ${S.L}, ${levelName(S.L)}.</p>
+    <p class="rule">Score ${S.score.toLocaleString()} · Best ${S.best.toLocaleString()}</p>
+    <p>Before each drop, check every column: is there one that matches, flips, or needs just one multiplier?</p>
+    ${startButtons()}`);
+}
+function startButtons(){
+  const lv = LEVELS.map((l, i) => `<button data-act="start" data-l="${i + 1}"><b>${i + 1}</b>${l.name}</button>`).join('');
+  return `${S.bestL > 1 ? `<button class="go" data-act="start" data-l="${S.bestL}">Continue at level ${S.bestL}</button>` : `<button class="go" data-act="start" data-l="1">Start</button>`}
+    <p class="lbl" style="margin-top:4px">Or jump in</p>
+    <div class="lvls">${lv}<button data-act="practice" style="grid-column:span 3"><b>P</b>Parabola Drop: three points, one parabola</button></div>`;
+}
+function titleCard(){
+  S.mode = 'title';
+  showCard(`<h2>Make the numbers match</h2>
+    <p>Each bar is an equation and each column a letter. If a column's numbers match when the bar lands, that letter pops. That's elimination: subtract one equation from the other.</p>
+    <ul>
+      <li>Type <kbd>1</kbd>–<kbd>9</kbd> to multiply the bar. <kbd>Space</kbd> then a digit multiplies the stack top.</li>
+      <li><kbd>↑</kbd> flips the bar's signs. <kbd>←</kbd><kbd>→</kbd> steers it between wells.</li>
+      <li>Matching numbers glow before the bar lands.</li>
+      <li>One letter left in a row means it's solved. A full well ends the game.</li>
+    </ul>
+    ${startButtons()}`);
+}
+
+// ---------- boss: Parabola Drop ----------
+function genPara(scaled){
+  let xs, a, b, c;
+  if (scaled){
+    const base = pick([10, 20, 30]), pat = pick([[0,1,2],[0,1,2],[0,1,3],[0,2,3]]);
+    xs = pat.map(i => base + 10 * i); a = nz(-6, 6) / 10; b = ri(-40, 40); c = ri(-10, 100) * 10;
+  } else {
+    const pool = [-4,-3,-2,-1,1,2,3,4,5]; xs = [];
+    while (xs.length < 3){ const x = pick(pool); if (!xs.includes(x) && !xs.includes(-x)) xs.push(x); }
+    xs.sort((p, q) => p - q); a = nz(-3, 3); b = ri(-6, 6); c = ri(-9, 9);
+  }
+  const ys = xs.map(x => Math.round((a * x * x + b * x + c) * 1e6) / 1e6);
+  return { sol:[a, b, c], pts: xs.map((x, i) => [x, ys[i]]) };
+}
+function bossIntro(){
+  S.mode = 'bossintro'; bar = null; res = null;
+  showCard(`<h2>Parabola Drop</h2>
+    <p>Three points sit on a parabola <b>y = ax² + bx + c</b>. Plug each point in and you get three equations. This time the <b>=</b> column rides along.</p>
+    <pre class="rule">(20, 440) →  400a + 20b + c = 440
+(30, 280) →  900a + 30b + c = 280
+                 <em>↑ waits in both wells</em>
+(40, 200) → 1600a + 40b + c = 200</pre>
+    <ul>
+      <li>The middle point's equation waits at the bottom of <b>both</b> wells.</li>
+      <li>Drop the other two so the <b>same letter</b> pops in each well. (The c's are all 1. Hint, hint.)</li>
+      <li>Then one well's row lifts out and falls on the other. Pop one more letter and the parabola appears.</li>
+      <li>A drop that doesn't match bounces back and costs a heart. You have three.</li>
+    </ul>
+    <button class="go" data-act="beginboss">Drop in</button>`);
+}
+function beginBoss(){
+  hideCard();
+  const g = genPara(S.practice ? Math.random() < .6 : cycle(S.L) > 0 || S.L > 3 || Math.random() < .5);
+  V = { nv:3, vars:['a', 'b', 'c'], hasConst:true, nw:2 }; layout();
+  const E = g.pts.map(([x, y], i) => Object.assign(mkRow([x * x, x, 1], y), { id: i + 1 }));
+  wells = [[mkRow(E[1].v.slice(), E[1].k)], [mkRow(E[1].v.slice(), E[1].k)]];
+  boss = { g, E, queue:[E[0], E[2]], stage:1, lock:null, done:[false, false], hearts:3, allowed:[0, 1], rows:[] };
+  paper = []; renderPaper();
+  S.mode = 'play'; renderHUD();
+  say(`<b>Parabola Drop.</b> Points ${g.pts.map(p => `(${p[0]}, ${fmt(p[1])})`).join(', ')}. Both wells hold the middle point's equation.`, 'gold');
+  spawnBar();
+}
+function bossSpawn(){
+  resetMults();
+  if (boss.stage === 1){
+    const r = boss.queue[0];
+    boss.allowed = [0, 1].filter(w => !boss.done[w]);
+    bar = { row: mkRow(r.v.slice(), r.k), w: boss.allowed[0], y: WELL_TOP - 4 };
+  } else {
+    boss.allowed = [1];
+    bar = { row: boss.lifted, w: 1, y: WELL_TOP - 4 };
+  }
+}
+function bounce(msg){
+  boss.hearts--; shake(); tone(110, .3, 'sawtooth', .06, .5);
+  bar.y = WELL_TOP - 4; resetMults();
+  say(`${msg} <span class="pts" style="color:var(--bad)">−1 heart</span>`, 'bad');
+  if (boss.hearts <= 0) bossEnd(false);
+}
+function bossLand(w, B, sB, sT, cols){
+  if (!cols.length){
+    const best = bestFor(B);
+    return bounce(`<b>No match</b>, so it bounced. ${best ? howTo(best.p, best.q, best.i) : ''}`);
+  }
+  if (boss.stage === 1 && boss.lock !== null && !cols.includes(boss.lock)){
+    return bounce(`That pops ${cols.map(c => V.vars[c]).join(' and ')}, but the other well lost <b>${V.vars[boss.lock]}</b>. Both wells have to lose the same letter, so the two new equations share the same two unknowns.`);
+  }
+  res = { gen: bossPop(w, B, sB, sT, cols), wait: 0 };
+  bar = null;
+}
+function* bossPop(w, B, sB, sT, cols){
+  const st = wells[w];
+  const shownT = mkRow(sT.v, sT.k); shownT.flash = cols;
+  const shownB = mkRow(sB.v, sB.k); shownB.flash = cols;
+  st[st.length - 1] = shownT; st.push(shownB);
+  tone(520, .1, 'square', .035, 1.6);
+  yield .4;
+  const R = mkRow(sT.v.map((x, i) => x - sB.v[i]), sT.k - sB.k); R.born = .3;
+  for (const c of cols) for (const r of [st.length - 1, st.length - 2]){ boom(cellCX(w, c), rowY(r) + ROW_H / 2); burst(cellCX(w, c), rowY(r) + ROW_H / 2, VAR_COL[c]); }
+  st.pop(); st.pop(); st.push(R);
+  boss.rows.push(R);
+  tone(150, .22, 'sawtooth', .04, .4);
+  paper.push({ la: S.mTop > 1 ? `well ×${S.mTop}` : 'well', a: termsStr(sT.v, sT.k), op: MINUS, lb: S.mBar * S.sign !== 1 ? `bar ×${S.sign < 0 ? MINUS : ''}${S.mBar}` : 'bar', b: termsStr(sB.v, sB.k), r: termsStr(R.v, R.k) });
+  renderPaper();
+  const pts = 40 * Math.max(1, S.L); S.score += pts; saveBest(); renderHUD();
+  if (boss.stage === 1){
+    boss.done[w] = true; boss.queue.shift();
+    if (boss.lock === null) boss.lock = cols[0];
+    const v = V.vars[boss.lock];
+    say(boss.done.every(Boolean)
+      ? `<b>${v} is gone from both wells.</b> Two equations, two unknowns. One row lifts out and falls on the other: make a column match. <span class="pts">+${pts}</span>`
+      : `<b>${v} popped.</b> Now pop <b>${v}</b> in the other well too. <span class="pts">+${pts}</span>`, 'good');
+    yield .5;
+    if (boss.done.every(Boolean)){
+      boss.stage = 2; boss.lifted = mkRow(wells[0][0].v.slice(), wells[0][0].k);
+      wells[0] = [];
+      tone(330, .3, 'square', .04, 2);
+      yield .4;
+    }
+  } else {
+    R.gem = 1; yield .7;
+    bossEnd(true);
+  }
+}
+function bossAfter(){ if (S.mode === 'play' && boss && !bar) spawnBar(); }
+function bossEnd(won){
+  res = null; bar = null; S.mode = 'bossclear';
+  const { g, E, rows } = boss, sol = g.sol, vars = V.vars;
+  // back-substitution, from the newest equations to the originals
+  const known = {}, lines = [];
+  const pool = rows.slice().reverse().concat(E);
+  if (won){
+    for (let guard = 0; guard < 6 && Object.keys(known).length < 3; guard++){
+      for (const r of pool){
+        const unk = r.v.map((c, i) => c && !(i in known) ? i : -1).filter(i => i >= 0);
+        if (unk.length !== 1) continue;
+        const u = unk[0], rest = r.v.reduce((s, c, i) => i !== u && c ? s + c * known[i] : s, 0);
+        known[u] = Math.round((r.k - rest) / r.v[u] * 1e9) / 1e9;
+        lines.push(r.v.filter(Boolean).length === 1 ? `${vars[u]} = ${fmt(r.k)} ÷ ${fmt(r.v[u])} = <b>${fmt(known[u])}</b>` : `${vars[u]} = <b>${fmt(known[u])}</b>, from ${termsStr(r.v, r.k)}`);
+        break;
+      }
+    }
+  }
+  const poly = polyStr(sol);
+  const pts = won ? 150 * Math.max(1, S.L) + 50 * boss.hearts : 0;
+  S.score += pts; saveBest(); renderHUD();
+  if (won) arpeggio([392, 523, 659, 784, 1047, 1319], 80); else tone(80, .5, 'sawtooth', .07, .4);
+  showCard(`<h2>${won ? 'Parabola found' : 'Out of hearts'}</h2>
+    ${graphSVG(g)}
+    <p class="rule" style="color:var(--f)">${poly}</p>
+    ${won ? `<p>${lines.join('<br>')}</p><p class="rule">Bonus +${pts.toLocaleString()} · Score ${S.score.toLocaleString()}</p>`
+          : `<p>Here's the answer. The quick path: drop each outer point on the middle one so <b>c</b> pops (the c's are all 1, so no multiplying). Then match the <b>b</b> column of the two new rows.</p>`}
+    <button class="go" data-act="afterboss">${S.practice ? 'Another parabola' : `On to level ${S.L + 1}`}</button>
+    ${S.practice ? '<button class="go alt" data-act="title">Back to the menu</button>' : ''}`);
+}
+function polyStr([a, b, c]){
+  let s = '';
+  for (const [v, u] of [[a, 'x²'], [b, 'x'], [c, '']]){
+    if (!v) continue;
+    const mag = (Math.abs(v) === 1 && u ? '' : fmt(Math.abs(v))) + u;
+    s += s ? (v < 0 ? ` ${MINUS} ` : ' + ') + mag : (v < 0 ? MINUS : '') + mag;
+  }
+  return 'y = ' + (s || '0');
+}
+function graphSVG(g){
+  const Wd = 360, Hd = 150, [a, b, c] = g.sol, f = x => a * x * x + b * x + c;
+  const xs = g.pts.map(p => p[0]), lo = Math.min(...xs), hi = Math.max(...xs), span = hi - lo;
+  const x0 = lo - span * .3, x1 = hi + span * .3;
+  let y0 = Infinity, y1 = -Infinity;
+  for (let i = 0; i <= 60; i++){ const y = f(x0 + (x1 - x0) * i / 60); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+  for (const p of g.pts){ y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]); }
+  const pad = (y1 - y0 || 10) * .15; y0 -= pad; y1 += pad;
+  const sx = x => (x - x0) / (x1 - x0) * Wd, sy = y => Hd - (y - y0) / (y1 - y0) * Hd;
+  let d = '';
+  for (let i = 0; i <= 80; i++){ const x = x0 + (x1 - x0) * i / 80; d += (i ? 'L' : 'M') + sx(x).toFixed(1) + ' ' + sy(f(x)).toFixed(1); }
+  const axes = (x0 < 0 && x1 > 0 ? `<line x1="${sx(0)}" y1="0" x2="${sx(0)}" y2="${Hd}" stroke="#8a93b8" stroke-opacity=".4"/>` : '') +
+               (y0 < 0 && y1 > 0 ? `<line x1="0" y1="${sy(0)}" x2="${Wd}" y2="${sy(0)}" stroke="#8a93b8" stroke-opacity=".4"/>` : '');
+  const dots = g.pts.map(([x, y]) => {
+    const px = sx(x), py = sy(y), tx = Math.min(px + 7, Wd - 70), ty = py < 20 ? py + 16 : py - 8;
+    return `<rect x="${px - 4}" y="${py - 4}" width="8" height="8" fill="#f2f5ff"/><text x="${tx}" y="${ty}" fill="#f2f5ff" font-family="IBM Plex Mono, monospace" font-size="11">(${x}, ${fmt(y)})</text>`;
+  }).join('');
+  return `<svg viewBox="0 0 ${Wd} ${Hd}" role="img" aria-label="The parabola through the three points">${axes}<path d="${d}" fill="none" stroke="#ffc53d" stroke-width="2.5"/>${dots}</svg>`;
+}
+function afterBoss(){
+  boss = null;
+  if (S.practice){ bossIntro(); return; }
+  S.L++; levelIntro();
+}
+
+// ---------- pause / toggles ----------
+function pause(){
+  if (S.mode === 'play'){
+    S.pausedFrom = 'play'; S.mode = 'paused'; S.soft = false;
+    showCard(`<h2>Paused</h2><p>The bar is hanging in the air.</p><button class="go" data-act="resume">Resume</button>`);
+  } else if (S.mode === 'paused'){ S.mode = 'play'; hideCard(); }
+}
+function toggleMute(){ S.muted = !S.muted; try { localStorage.setItem('cc-muted', S.muted ? '1' : '0'); } catch {} renderHUD(); }
+function primary(){
+  if (performance.now() - S.cardAt < 450) return;
+  switch (S.mode){
+    case 'title': case 'over': start(S.bestL); break;
+    case 'levelintro': beginLevel(); break;
+    case 'levelclear': (S.L % BOSS_EVERY === 0 ? bossIntro : () => { S.L++; levelIntro(); })(); break;
+    case 'bossintro': beginBoss(); break;
+    case 'bossclear': afterBoss(); break;
+    case 'paused': pause(); break;
+  }
+}
+
+// ---------- input ----------
+document.addEventListener('keydown', e => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const k = e.key, live = S.mode === 'play';
+  if ([' ', 'Enter', 'Backspace', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(k)) e.preventDefault();
+  if (k === 'Enter'){ if (e.repeat) return; return live ? hardDrop() : primary(); }
+  if (k === 'p' || k === 'P' || k === 'Escape') return pause();
+  if (k === 'm' || k === 'M') return toggleMute();
+  if (!live){ if (k === ' ' && !e.repeat) primary(); return; }
+  const dm = /^Digit([1-9])$/.exec(e.code);
+  if (e.shiftKey && dm){ if (canAct()){ S.mTop = +dm[1]; S.armTop = false; tick(); } return; }
+  if (/^[1-9]$/.test(k)) return typeDigit(k);
+  switch (k){
+    case 'ArrowLeft': case 'a': case 'A': return moveBar(-1);
+    case 'ArrowRight': case 'd': case 'D': return moveBar(1);
+    case 'ArrowUp': case 'w': case 'W': case '-': return flip();
+    case 'ArrowDown': case 's': case 'S': S.soft = true; return;
+    case ' ': case 't': case 'T': if (!e.repeat) armTop(); return;
+    case 'Backspace': case '0': return clearMults();
+  }
+});
+document.addEventListener('keyup', e => { if (['ArrowDown', 's', 'S'].includes(e.key)) S.soft = false; });
+card.addEventListener('click', e => {
+  const b = e.target.closest('[data-act]'); if (!b) return;
+  b.blur();
+  const act = b.dataset.act;
+  if (act === 'start') start(+b.dataset.l || 1);
+  else if (act === 'practice'){ S.practice = true; S.L = 1; S.score = 0; bossIntro(); }
+  else if (act === 'go') beginLevel();
+  else if (act === 'next'){ S.L++; levelIntro(); }
+  else if (act === 'boss') bossIntro();
+  else if (act === 'beginboss') beginBoss();
+  else if (act === 'afterboss') afterBoss();
+  else if (act === 'title'){ boss = null; S.practice = false; titleCard(); renderHUD(); }
+  else if (act === 'resume') pause();
+});
+document.querySelectorAll('.pad button').forEach(b => {
+  const k = b.dataset.k;
+  b.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    if (S.mode !== 'play') return void (k === 'drop' && primary());
+    switch (k){
+      case 'drop': return hardDrop();
+      case 'left': return moveBar(-1);
+      case 'right': return moveBar(1);
+      case 'flip': return flip();
+      case 'top': return armTop();
+      case 'back': return clearMults();
+      case 'soft': S.soft = true; return;
+      default: return typeDigit(k);
+    }
+  });
+  if (k === 'soft') for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) b.addEventListener(ev, () => { S.soft = false; });
+});
+// tap a well to move the bar there
+cv.addEventListener('pointerdown', e => {
+  if (!canAct()) return;
+  const r = cv.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * W;
+  const w = G.xs.findIndex(x0 => x >= x0 && x <= x0 + G.wellW);
+  if (w >= 0 && w !== bar.w) moveBar(Math.sign(w - bar.w));
+});
+$('muteBtn').addEventListener('click', e => { toggleMute(); e.currentTarget.blur(); });
+window.addEventListener('blur', () => { if (S.mode === 'play') pause(); });
+
+// ---------- drawing ----------
+function fitText(txt, x, y, maxW, size, color, weight = 700){
+  ctx.font = `${weight} ${size}px ${MONO}`;
+  const w = ctx.measureText(txt).width;
+  if (w > maxW) ctx.font = `${weight} ${Math.max(8, Math.floor(size * maxW / w))}px ${MONO}`;
+  ctx.fillStyle = color; ctx.fillText(txt, x, y);
+}
+function drawBlock(x, y, w, h, val, c, o = {}){
+  const isConst = V.hasConst && c === V.nv, col = isConst ? CONST_COL : VAR_COL[c];
+  if (!val && !isConst){ ctx.fillStyle = 'rgba(138,147,184,.25)'; ctx.fillRect(x + w / 2 - 2, y + h / 2 - 2, 4, 4); return; }
+  const bx = x + 2, by = y + 2, bw = w - 4, bh = h - 4;
+  if (o.gem){
+    const cx = x + w / 2, cy = y + h / 2, r = Math.min(w, h) / 2 - 1, pulse = 1 + .08 * Math.sin(performance.now() / 60);
+    ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(cx, cy - r * pulse); ctx.lineTo(cx + r * pulse, cy); ctx.lineTo(cx, cy + r * pulse); ctx.lineTo(cx - r * pulse, cy); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.fillRect(cx - r * .35, cy - r * .45, r * .3, r * .3);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    fitText(V.vars[c], cx, cy + 1, bw, 18, C.ink);
+    return;
+  }
+  const neg = val < 0 && !isConst;
+  ctx.fillStyle = neg ? '#1b1e36' : col; ctx.fillRect(bx, by, bw, bh);
+  if (neg){ ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.strokeRect(bx + 1, by + 1, bw - 2, bh - 2); }
+  else {
+    ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(bx, by, bw, 3);
+    ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fillRect(bx, by + bh - 3, bw, 3);
+  }
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  fitText(fmt(val), x + w / 2, y + h / 2 + 1, bw - 6, 18, neg ? col : C.ink);
+  if (o.glow){
+    ctx.strokeStyle = Math.floor(performance.now() / 160) % 2 ? C.green : C.white; ctx.lineWidth = 3;
+    ctx.strokeRect(bx - 1, by - 1, bw + 2, bh + 2);
+  }
+  if (o.flash){ ctx.fillStyle = 'rgba(255,255,255,.45)'; ctx.fillRect(bx, by, bw, bh); }
+}
+function drawRowAt(w, y, row, o = {}){
+  const vals = o.vals || row.v, k = o.k ?? row.k;
+  const a = row.born > 0 ? 1 - row.born / .4 : 1;
+  ctx.globalAlpha = clamp(a, 0, 1) * (o.alpha ?? 1);
+  for (let c = 0; c < G.nc; c++){
+    const isConst = V.hasConst && c === V.nv, val = isConst ? k : vals[c];
+    drawBlock(G.xs[w] + c * G.colW, y, G.colW, ROW_H, val, c, {
+      glow: o.glow && o.glow.includes(c), flash: row.flash && row.flash.includes(c), gem: row.gem && val && !isConst });
+  }
+  ctx.globalAlpha = 1;
+}
+function pill(txt, x, y, color){
+  ctx.font = `700 13px ${MONO}`; const w = ctx.measureText(txt).width + 12;
+  ctx.fillStyle = C.ink; ctx.fillRect(x - w / 2, y - 10, w, 20);
+  ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.strokeRect(x - w / 2 + 1, y - 9, w - 2, 18);
+  ctx.fillStyle = color; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(txt, x, y + 1);
+}
+function drawWells(t){
+  const sB = bar ? scaledBar() : null, sT = bar ? scaledTop(bar.w) : null;
+  const glow = sB && sT ? matchCols(sB, sT) : [];
+  for (let w = 0; w < V.nw; w++){
+    const x = G.xs[w], st = wells[w], blocked = boss && !boss.allowed.includes(w) && !res;
+    ctx.fillStyle = '#0d1020'; ctx.fillRect(x - 3, WELL_TOP, G.wellW + 6, WELL_BOT - WELL_TOP + 3);
+    for (let c = 1; c < G.nc; c++){ ctx.fillStyle = 'rgba(42,49,82,.6)'; ctx.fillRect(x + c * G.colW, WELL_TOP, 1, WELL_BOT - WELL_TOP); }
+    ctx.strokeStyle = bar && bar.w === w ? C.muted : C.line; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(x - 3, WELL_TOP); ctx.lineTo(x - 3, WELL_BOT + 2); ctx.lineTo(x + G.wellW + 3, WELL_BOT + 2); ctx.lineTo(x + G.wellW + 3, WELL_TOP); ctx.stroke();
+    // danger line
+    ctx.fillStyle = 'rgba(255,59,59,.35)'; ctx.fillRect(x - 3, WELL_TOP + ROW_H, G.wellW + 6, 1);
+    // letters
+    for (let c = 0; c < G.nc; c++){
+      const isConst = V.hasConst && c === V.nv;
+      ctx.font = `700 15px ${MONO}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = isConst ? C.muted : VAR_COL[c]; ctx.fillText(isConst ? '=' : V.vars[c], x + (c + .5) * G.colW, WELL_TOP - 12);
+    }
+    // stack
+    st.forEach((row, r) => {
+      const isTop = r === st.length - 1 && bar && bar.w === w;
+      drawRowAt(w, rowY(r), row, isTop ? { vals: sT.v, k: sT.k, glow } : {});
+    });
+    if (bar && bar.w === w && st.length){
+      const yT = rowY(st.length - 1);
+      if (S.mTop > 1 || S.armTop) pill(S.armTop && Math.floor(t * 3) % 2 ? '×?' : '×' + (S.armTop ? '?' : S.mTop), x + G.wellW - 18, yT - 2, C.blue);
+    }
+    if (blocked){ ctx.fillStyle = 'rgba(11,13,24,.55)'; ctx.fillRect(x - 3, WELL_TOP, G.wellW + 6, WELL_BOT - WELL_TOP); }
+  }
+  // falling bar, its ghost, and its multiplier
+  if (bar){
+    const x = G.xs[bar.w], gy = stackTopY(bar.w) - ROW_H;
+    ctx.strokeStyle = 'rgba(242,245,255,.25)'; ctx.setLineDash([4, 4]); ctx.lineWidth = 1;
+    ctx.strokeRect(x + 1.5, gy + 1.5, G.wellW - 3, ROW_H - 3); ctx.setLineDash([]);
+    drawRowAt(bar.w, bar.y, bar.row, { vals: sB.v, k: sB.k, glow });
+    const m = S.sign * S.mBar;
+    if (m !== 1) pill('×' + fmt(m), x + 18, bar.y - 2, C.gold);
+  }
+}
+function drawTop(t){
+  ctx.font = `400 11px ${PIX}`; ctx.textBaseline = 'middle';
+  if (boss){
+    ctx.fillStyle = C.gold; ctx.textAlign = 'left'; ctx.fillText('PARABOLA DROP', 16, 20);
+    ctx.fillStyle = C.muted; ctx.fillText(boss.g.pts.map(p => `(${p[0]}, ${fmt(p[1])})`).join('  '), 16, 40);
+    ctx.textAlign = 'right';
+    for (let i = 0; i < 3; i++){ ctx.fillStyle = i < boss.hearts ? C.pink : C.panel2; ctx.fillRect(W - 20 - i * 18, 14, 12, 12); }
+    return;
+  }
+  const lv = LV();
+  ctx.fillStyle = C.muted; ctx.textAlign = 'left'; ctx.fillText(`LEVEL ${S.L} · ${levelName(S.L).toUpperCase()}`, 16, 20);
+  ctx.textAlign = 'right'; ctx.fillText(`SOLVED ${Math.min(S.solved, lv.goal)}/${lv.goal}`, W - 16, 20);
+  const n = lv.goal, gw = (W - 32 - 4 * (n - 1)) / n;
+  for (let i = 0; i < n; i++){ ctx.fillStyle = i < S.solved ? C.green : C.panel2; ctx.fillRect(16 + i * (gw + 4), 32, gw, 8); }
+  if (lv.rise && S.mode === 'play'){ ctx.fillStyle = C.bad; ctx.fillRect(16, 44, (W - 32) * clamp(1 - S.riseT / lv.rise, 0, 1), 2); }
+}
+function drawReadout(){
+  if (!bar) return;
+  const m = S.sign * S.mBar;
+  ctx.font = `700 15px ${MONO}`; ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
+  const a = `BAR ×${fmt(m)}`, b = `STACK ×${S.armTop ? '?' : S.mTop}`;
+  ctx.fillStyle = m !== 1 ? C.gold : C.muted; ctx.fillText(a, W / 2 - 70, 616);
+  ctx.fillStyle = S.mTop > 1 || S.armTop ? C.blue : C.muted; ctx.fillText(b, W / 2 + 70, 616);
+}
+const BOOM_COLS = [C.gold, C.white, C.pink, C.blue];
+function draw(t){
+  ctx.setTransform(scale, 0, 0, scale, 0, 0);
+  ctx.fillStyle = '#0f1224'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = C.panel; ctx.fillRect(0, 600, W, H - 600);
+  if (G && S.mode !== 'title'){ drawTop(t); drawWells(t); drawReadout(); }
+  for (const b of booms){
+    const f = b.t < .15 ? b.t / .15 : 1 - (b.t - .15) / (b.dur - .15); if (f <= 0) continue;
+    ctx.fillStyle = BOOM_COLS[Math.floor(t * 20 + b.x) % 4]; ctx.globalAlpha = .75;
+    ctx.beginPath(); ctx.arc(b.x, b.y, b.r * f, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  for (const p of parts){ ctx.globalAlpha = Math.max(0, p.life / p.max); ctx.fillStyle = p.c; ctx.fillRect(p.x - 2, p.y - 2, 4, 4); }
+  ctx.globalAlpha = 1;
+}
+
+// ---------- loop ----------
+let last = null;
+function frame(ts){
+  const t = ts / 1000;
+  if (last === null) last = t;
+  const dt = clamp(t - last, 0, .05); last = t;
+  if (S.mode !== 'paused'){
+    for (const p of parts){ p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt; }
+    parts = parts.filter(p => p.life > 0);
+    for (const b of booms) b.t += dt;
+    booms = booms.filter(b => b.t < b.dur);
+    for (const st of wells) for (const r of st) if (r.born > 0) r.born = Math.max(0, r.born - dt);
+  }
+  if (S.mode === 'play'){
+    if (res){
+      res.wait -= dt;
+      while (res && res.wait <= 0){
+        const r = res.gen.next();
+        if (r.done){ res = null; afterResolve(); } else res.wait += r.value;
+      }
+    } else if (bar){
+      bar.y += (WELL_BOT - WELL_TOP) / fallTime() * (S.soft ? 7 : 1) * dt;
+      if (bar.y + ROW_H >= stackTopY(bar.w)){ bar.y = stackTopY(bar.w) - ROW_H; land(); }
+    }
+    const lv = LV();
+    if (!boss && lv.rise && S.mode === 'play' && !res){ S.riseT -= dt; if (S.riseT <= 0){ S.riseT = lv.rise * Math.pow(.85, cycle(S.L)); rise(); } }
+  }
+  draw(t);
+  requestAnimationFrame(frame);
+}
+
+function boot(){
+  fitCanvas();
+  if ('ResizeObserver' in window) new ResizeObserver(fitCanvas).observe(screen); else window.addEventListener('resize', fitCanvas);
+  titleCard();
+  renderHUD(); renderPaper();
+  requestAnimationFrame(frame);
+}
+window.claude?.hot?.ready ? window.claude.hot.ready(boot) : boot();
+})();
+</script>
+</html>
